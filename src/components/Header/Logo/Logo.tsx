@@ -4,12 +4,18 @@ import React from "react";
 const Logo = () => {
   return (
     <>
-      <Button className="p-8" color="primary">
-        <h1 className="text-5xl font-light flex">
-          <img src="parse.png" width={50}></img>
-          <div className="pl-4">Parser.</div>
-        </h1>
-        <p className="flex items-end italic text-sm pl-2">Parsing made easy</p>
+      <Button
+        className="py-2 px-28 flex justify-center items-center h-auto w-[40vh]"
+        color="primary"
+        variant="shadow"
+      >
+        <img src="parse.png" width={50}></img>
+        <div className="flex-1">
+          <h1 className="text-5xl justify-center font-light flex w-full">
+            <div className="pl-2">MParser</div>
+          </h1>
+          <div className="italic text-xs font-semibold">Parsing made easy</div>
+        </div>
       </Button>
     </>
   );
