@@ -1,6 +1,6 @@
 import Logo from "./Logo/Logo";
 import { Divider } from "@nextui-org/react";
-import Menu from "../Menu/Menu";
+import Menu from "./Menu/Menu";
 
 const Header = () => {
   return (
