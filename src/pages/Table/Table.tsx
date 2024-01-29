@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableHeader,
@@ -14,41 +14,33 @@ import {
   DropdownItem,
   Chip,
   Pagination,
-  Selection,
-  ChipProps,
   SortDescriptor,
+  Divider,
 } from "@nextui-org/react";
 import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
 import { columns, products } from "../../data";
-import { Marketplace, Product } from "../../types";
-import { marketplaces } from "../../constants";
-
-const statusColorMap: Record<string, ChipProps["color"]> = {
-  active: "success",
-  paused: "danger",
-  vacation: "warning",
-};
+import { IMarketplace, IProduct, Property } from "../../types";
+// import { availableMarketplaces } from "../../constants";
 
 type User = (typeof products)[0];
 
 export default function App() {
   const [filterValue, setFilterValue] = React.useState("");
-  const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
-    new Set([])
-  );
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>({
     column: "age",
     direction: "ascending",
   });
 
-  const initialMarketplacesLabels = marketplaces as readonly Marketplace[];
+  // const initialMarketplacesLabels =
+  //   availableMarketplaces;
 
-  const [martketplacesLabels, setMarketplacesLabels] = React.useState(
-    initialMarketplacesLabels
-  );
+  // const [martketplacesLabels, setMarketplacesLabels] = React.useState(
+  //   initialMarketplacesLabels
+  // );
 
   const [page, setPage] = React.useState(1);
 
@@ -69,6 +61,10 @@ export default function App() {
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
+  const [isEdited, setIsEdited] = useState(true);
+
+  function addNew() {}
+
   const items = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
@@ -86,72 +82,79 @@ export default function App() {
     });
   }, [sortDescriptor, items]);
 
-  const handleClose = (marketplaceToRemove: Marketplace) => {
-    setMarketplacesLabels(
-      martketplacesLabels.filter(
-        (marketplace) => marketplace !== marketplaceToRemove
-      )
-    );
-    if (martketplacesLabels.length === 1) {
-      setMarketplacesLabels(initialMarketplacesLabels);
-    }
-  };
+  // const handleClose = (marketplaceToRemove: IMarketplace) => {
+  //   setMarketplacesLabels(
+  //     martketplacesLabels.filter(
+  //       (marketplace) => marketplace !== marketplaceToRemove
+  //     )
+  //   );
+  //   if (martketplacesLabels.length === 1) {
+  //     setMarketplacesLabels(initialMarketplacesLabels);
+  //   }
+  // };
 
   const renderCell = React.useCallback(
-    (user: Product, columnKey: React.Key) => {
-      const cellValue = user[columnKey as keyof Product];
+    (product: IProduct, columnKey: React.Key) => {
+      const cellValue = product[columnKey as keyof IProduct];
 
       switch (columnKey) {
-        case "marketplace":
-          return marketplaces.map((marketplace) => {
+        case "marketplaces":
+          console.log(cellValue);
+          return (cellValue as IMarketplace[]).map((marketplace) => {
             return (
-              <div className="text-black py-1">
-                <Chip
-                  key={marketplace}
-                  onClose={() => handleClose(marketplace)}
-                >
-                  {marketplace}
-                </Chip>
+              <div className="text-dark">
+                <div className="py-2 flex items-center gap-2">
+                  <section className="bg-red-400 rounded-xl flex-auto flex items-stretch content-stretch p-3 gap-3">
+                    <Chip
+                      key={`${product.id}, ${marketplace.name}`}
+                      className="font-light"
+                      color="danger"
+                    >
+                      {marketplace.name}
+                    </Chip>
+                    <div>
+                      <Divider
+                        orientation="vertical"
+                        className="bg-neutral-800"
+                      />
+                    </div>
+                    {Array.from(marketplace.properties).map(
+                      (property: Property) => {
+                        return (
+                          <Chip
+                            key={`${product.id}, ${marketplace.name}, ${property}`}
+                            className="font-light"
+                            color="warning"
+                            // onClose={isEdited ? }
+                          >
+                            {property}
+                          </Chip>
+                        );
+                      }
+                    )}
+                  </section>
+                  {isEdited ? (
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      color="danger"
+                      className="grow-0"
+                    >
+                      <CloseIcon />
+                    </Button>
+                  ) : null}
+                </div>
+                <Divider />
               </div>
             );
           });
-        // case "name":
-        //   return (
-        //     <User
-        //       avatarProps={{ radius: "lg", src: user.avatar }}
-        //       description={user.email}
-        //       name={cellValue}
-        //     >
-        //       {user.email}
-        //     </User>
-        //   );
-        // case "role":
-        //   return (
-        //     <div className="flex flex-col">
-        //       <p className="text-bold text-small capitalize">{cellValue}</p>
-        //       <p className="text-bold text-tiny capitalize text-default-400">
-        //         {user.team}
-        //       </p>
-        //     </div>
-        //   );
-        // case "status":
-        //   return (
-        //     <Chip
-        //       className="capitalize"
-        //       color={statusColorMap[user.status]}
-        //       size="sm"
-        //       variant="flat"
-        //     >
-        //       {cellValue}
-        //     </Chip>
-        //   );
         case "actions":
           return (
             <div className="relative flex justify-end items-center gap-2">
-              <Dropdown>
+              <Dropdown className="text-dark">
                 <DropdownTrigger>
                   <Button isIconOnly size="sm" variant="light">
-                    <MoreVertIcon className="text-default-300" />
+                    <MoreVertIcon className="text-default-400" />
                   </Button>
                 </DropdownTrigger>
                 <DropdownMenu>
@@ -163,7 +166,9 @@ export default function App() {
             </div>
           );
         default:
-          return <div className="text-black">{cellValue}</div>;
+          return (
+            <div className="text-dark">{cellValue as string | number}</div>
+          );
       }
     },
     []
@@ -209,7 +214,7 @@ export default function App() {
         <div className="flex justify-between gap-3 items-end">
           <Input
             isClearable
-            className="w-full sm:max-w-[44%]"
+            className="w-full sm:max-w-[44%] text-dark"
             placeholder="Search by name..."
             startContent={<SearchIcon />}
             value={filterValue}
@@ -217,7 +222,7 @@ export default function App() {
             onValueChange={onSearchChange}
           />
           <div className="flex gap-3">
-            <Button color="primary" endContent={<AddIcon />}>
+            <Button color="primary" endContent={<AddIcon />} onClick={addNew}>
               Add New
             </Button>
           </div>
@@ -251,11 +256,6 @@ export default function App() {
   const bottomContent = React.useMemo(() => {
     return (
       <div className="py-2 px-2 flex flex-wrap justify-between items-center">
-        <span className="w-[30%] text-small text-default-400">
-          {selectedKeys === "all"
-            ? "All items selected"
-            : `${selectedKeys.size} of ${filteredItems.length} selected`}
-        </span>
         <Pagination
           isCompact
           showControls
@@ -285,7 +285,7 @@ export default function App() {
         </div>
       </div>
     );
-  }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
+  }, [items.length, page, pages, hasSearchFilter]);
 
   return (
     <Table
@@ -298,12 +298,9 @@ export default function App() {
       classNames={{
         wrapper: "max-h-[382px]",
       }}
-      selectedKeys={selectedKeys}
-      selectionMode="multiple"
       sortDescriptor={sortDescriptor}
       topContent={topContent}
       topContentPlacement="outside"
-      onSelectionChange={setSelectedKeys}
       onSortChange={setSortDescriptor}
     >
       <TableHeader columns={headerColumns}>
@@ -318,10 +315,10 @@ export default function App() {
         )}
       </TableHeader>
       <TableBody
-        emptyContent={"No products to keep track of"}
-        items={sortedItems as unknown as Product[]}
+        emptyContent={"No results"}
+        items={sortedItems as unknown as IProduct[]}
       >
-        {(item: Product) => (
+        {(item: IProduct) => (
           <TableRow key={item.id}>
             {(columnKey) => (
               <TableCell>{renderCell(item, columnKey)}</TableCell>

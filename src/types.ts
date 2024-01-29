@@ -1,16 +1,18 @@
 import {SVGProps} from "react";
-import { marketplaces, metadata } from "./constants";
+import { availableMarketplaces, availableProperties } from "./constants";
 
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
+export type Property = typeof availableProperties[number]
 
-export type Marketplace = typeof marketplaces[number]
-export type Property = typeof metadata[number]
+export interface IMarketplace {
+  name: typeof availableMarketplaces[number]
+  properties: Set<Property>
+}
 
-export type Product = {
+export interface IProduct {
   id: number | string
   name: string
-  marketplaces: Marketplace[]
-  properties: Property[]
+  marketplaces: IMarketplace[]
 }

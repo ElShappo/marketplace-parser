@@ -1,10 +1,10 @@
-import { Product } from "./types";
+import { IProduct } from "./types";
 
 const columns = [
   {name: "ID", uid: "id", sortable: true},
   {name: "Product Name", uid: "name", sortable: true},
-  {name: "Marketplace", uid: "marketplace"},
-  {name: "Properties", uid: "properties"},
+  {name: "Marketplaces", uid: "marketplaces"},
+  {name: "Actions", uid: "actions"},
 ];
 
 const statusOptions = [
@@ -13,42 +13,42 @@ const statusOptions = [
   {name: "Vacation", uid: "vacation"},
 ];
 
-export const products: Product[] = [
+export const products: IProduct[] = [
   {
     id: 1,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
+    name: 'Test',
+    marketplaces: [
+      {
+        name: 'ozon',
+        properties: new Set(['name', 'price'])
+      },
+      {
+        name: 'wildberries',
+        properties: new Set(['link', 'icon'])
+      },
+      {
+        name: 'yandex',
+        properties: new Set(['description'])
+      }
+    ]
   },
   {
     id: 2,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
-  },
-  {
-    id: 3,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
-  },
-  {
-    id: 4,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
-  },
-  {
-    id: 5,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
-  },
-  {
-    id: 6,
-    name: 'Test name',
-    marketplaces: ['ozon', 'wildberries'],
-    properties: ['name', 'price']
+    name: 'Another',
+    marketplaces: [
+      {
+        name: 'ozon',
+        properties: new Set(['name', 'price'])
+      },
+      {
+        name: 'wildberries',
+        properties: new Set(['link', 'icon'])
+      },
+      {
+        name: 'yandex',
+        properties: new Set(['description'])
+      }
+    ]
   },
 ]
 
