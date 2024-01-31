@@ -16,3 +16,14 @@ export interface IProduct {
   name: string
   marketplaces: IMarketplace[]
 }
+
+export interface IProductExtended extends IProduct {
+  intrinsicId: number | string
+  isEdited: boolean
+}
+
+export type ProductRef = {
+  intrinsicId: number | string
+  id: number | string
+  name: string
+}

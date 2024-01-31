@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -21,32 +21,29 @@ import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
-import { columns, products } from "../../data";
-import { IMarketplace, IProduct, Property } from "../../types";
-// import { availableMarketplaces } from "../../constants";
+import { columns, sampleProducts } from "../../data";
+import {
+  IMarketplace,
+  IProductExtended,
+  ProductRef,
+  Property,
+} from "../../types";
+import { ProductExtended, addIsEditedProperty } from "../../utils";
+import { observer } from "mobx-react-lite";
 
-type User = (typeof products)[0];
-
-export default function App() {
+const TableComponent = observer(() => {
   const [filterValue, setFilterValue] = React.useState("");
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>({
-    column: "age",
+    column: "id",
     direction: "ascending",
   });
+  const [products, setProducts] = useState<IProductExtended[]>([]);
 
-  // const initialMarketplacesLabels =
-  //   availableMarketplaces;
-
-  // const [martketplacesLabels, setMarketplacesLabels] = React.useState(
-  //   initialMarketplacesLabels
-  // );
+  console.log(products);
 
   const [page, setPage] = React.useState(1);
-
   const hasSearchFilter = Boolean(filterValue);
-
-  const headerColumns = columns;
 
   const filteredItems = React.useMemo(() => {
     let filteredUsers = [...products];
@@ -61,10 +58,6 @@ export default function App() {
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
-  const [isEdited, setIsEdited] = useState(true);
-
-  function addNew() {}
-
   const items = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
@@ -73,9 +66,13 @@ export default function App() {
   }, [page, filteredItems, rowsPerPage]);
 
   const sortedItems = React.useMemo(() => {
-    return [...items].sort((a: User, b: User) => {
-      const first = a[sortDescriptor.column as keyof User] as number;
-      const second = b[sortDescriptor.column as keyof User] as number;
+    return [...items].sort((a: IProductExtended, b: IProductExtended) => {
+      const first = a[sortDescriptor.column as keyof IProductExtended] as
+        | number
+        | string;
+      const second = b[sortDescriptor.column as keyof IProductExtended] as
+        | number
+        | string;
       const cmp = first < second ? -1 : first > second ? 1 : 0;
 
       return sortDescriptor.direction === "descending" ? -cmp : cmp;
@@ -93,16 +90,65 @@ export default function App() {
   //   }
   // };
 
-  const renderCell = React.useCallback(
-    (product: IProduct, columnKey: React.Key) => {
-      const cellValue = product[columnKey as keyof IProduct];
+  const productRefs = useRef<ProductRef[]>([]);
 
+  function addProduct() {
+    const newProduct = new ProductExtended({ isEdited: true }).get();
+    setProducts([...products, newProduct]);
+    productRefs.current.push({
+      intrinsicId: newProduct.intrinsicId,
+      id: newProduct.id,
+      name: newProduct.name,
+    });
+  }
+
+  // function onSave(product: IProductExtended) {
+
+  // }
+
+  function onView(id: string | number) {
+    const productWithThatId = products.find(
+      (product) => String(product.intrinsicId) === String(id)
+    );
+    if (productWithThatId!.isEdited) {
+      setProducts([
+        ...products.filter(
+          (product) => String(product.intrinsicId) !== String(id)
+        ),
+        { ...productWithThatId!, isEdited: false },
+      ]);
+    }
+  }
+  function onEdit(id: string | number) {
+    const productWithThatId = products.find(
+      (product) => String(product.intrinsicId) === String(id)
+    );
+    if (!productWithThatId!.isEdited) {
+      setProducts([
+        ...products.filter(
+          (product) => String(product.intrinsicId) !== String(id)
+        ),
+        { ...productWithThatId!, isEdited: true },
+      ]);
+    }
+  }
+  function onDelete(id: string | number) {
+    console.log(id);
+    setProducts([
+      ...products.filter(
+        (product) => String(product.intrinsicId) !== String(id)
+      ),
+    ]);
+  }
+
+  const renderCell = React.useCallback(
+    (product: IProductExtended, columnKey: React.Key) => {
+      const cellValue = product[columnKey as keyof IProductExtended];
       switch (columnKey) {
         case "marketplaces":
-          console.log(cellValue);
           return (cellValue as IMarketplace[]).map((marketplace) => {
             return (
-              <div className="text-dark">
+              <div className="text-dark" key={marketplace.name}>
                 <div className="py-2 flex items-center gap-2">
                   <section className="bg-red-400 rounded-xl flex-auto flex items-stretch content-stretch p-3 gap-3">
                     <Chip
@@ -133,7 +179,7 @@ export default function App() {
                       }
                     )}
                   </section>
-                  {isEdited ? (
+                  {product.isEdited ? (
                     <Button
                       isIconOnly
                       variant="light"
@@ -153,22 +199,64 @@ export default function App() {
             <div className="relative flex justify-end items-center gap-2">
               <Dropdown className="text-dark">
                 <DropdownTrigger>
-                  <Button isIconOnly size="sm" variant="light">
-                    <MoreVertIcon className="text-default-400" />
-                  </Button>
+                  {product.isEdited ? (
+                    <div className="flex gap-2">
+                      <Button color="primary" size="sm" onClick={onSave}>
+                        Save
+                      </Button>
+                      <Button size="sm" onClick={onCancel}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      data-key={product.id}
+                      onClick={(evt) => {
+                        id.current = evt.currentTarget.dataset.key;
+                      }}
+                    >
+                      <MoreVertIcon className="text-default-400" />
+                    </Button>
+                  )}
                 </DropdownTrigger>
                 <DropdownMenu>
-                  <DropdownItem>View</DropdownItem>
-                  <DropdownItem>Edit</DropdownItem>
-                  <DropdownItem>Delete</DropdownItem>
+                  <DropdownItem onClick={() => onView(product.intrinsicId)}>
+                    View
+                  </DropdownItem>
+                  <DropdownItem onClick={() => onEdit(product.intrinsicId)}>
+                    Edit
+                  </DropdownItem>
+                  <DropdownItem onClick={() => onDelete(product.intrinsicId)}>
+                    Delete
+                  </DropdownItem>
                 </DropdownMenu>
               </Dropdown>
             </div>
           );
         default:
-          return (
-            <div className="text-dark">{cellValue as string | number}</div>
-          );
+          if (product.isEdited) {
+            return (
+              <Input
+                variant="flat"
+                label={String(columnKey)}
+                // classNames={{
+                //   input: ["bg-dark"],
+                //   innerWrapper: "bg-dark",
+                //   inputWrapper: ["bg-dark"],
+                //   mainWrapper: ["bg-dark"],
+                //   base: ["bg-dark"],
+                //   helperWrapper: ["bg-dark"],
+                // }}
+              />
+            );
+          } else {
+            return (
+              <div className="text-dark">{cellValue as string | number}</div>
+            );
+          }
       }
     },
     []
@@ -222,7 +310,11 @@ export default function App() {
             onValueChange={onSearchChange}
           />
           <div className="flex gap-3">
-            <Button color="primary" endContent={<AddIcon />} onClick={addNew}>
+            <Button
+              color="primary"
+              endContent={<AddIcon />}
+              onClick={addProduct}
+            >
               Add New
             </Button>
           </div>
@@ -289,9 +381,10 @@ export default function App() {
 
   return (
     <Table
-      isStriped
+      // isStriped
+      radius="md"
       className="p-20"
-      aria-label="Example table with custom cells, pagination and sorting"
+      aria-label="Table of products"
       isHeaderSticky
       bottomContent={bottomContent}
       bottomContentPlacement="outside"
@@ -303,7 +396,7 @@ export default function App() {
       topContentPlacement="outside"
       onSortChange={setSortDescriptor}
     >
-      <TableHeader columns={headerColumns}>
+      <TableHeader columns={columns}>
         {(column) => (
           <TableColumn
             key={column.uid}
@@ -316,16 +409,20 @@ export default function App() {
       </TableHeader>
       <TableBody
         emptyContent={"No results"}
-        items={sortedItems as unknown as IProduct[]}
+        items={sortedItems as unknown as IProductExtended[]}
       >
-        {(item: IProduct) => (
-          <TableRow key={item.id}>
+        {(product: IProductExtended) => (
+          <TableRow key={product.id} className="border-2 border-slate-300">
             {(columnKey) => (
-              <TableCell>{renderCell(item, columnKey)}</TableCell>
+              <TableCell key={`${product.id}, ${columnKey}`}>
+                {renderCell(product, columnKey)}
+              </TableCell>
             )}
           </TableRow>
         )}
       </TableBody>
     </Table>
   );
-}
+});
+
+export default TableComponent;

@@ -1,6 +1,6 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Table from "./pages/Table/Table";
+import TableComponent from "./pages/Table/TableComponent";
 import PageLayout from "./components/PageLayout/PageLayout";
 
 function App() {
@@ -8,7 +8,7 @@ function App() {
     <Router>
       <Routes>
         <Route element={<PageLayout />}>
-          <Route path="/" element={<Table />} />
+          <Route path="/" element={<TableComponent />} />
         </Route>
       </Routes>
     </Router>

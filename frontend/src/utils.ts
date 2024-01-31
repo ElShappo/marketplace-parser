@@ -1,5 +1,6 @@
 import { availableMarketplaces, availableProperties } from "./constants";
-import { IMarketplace, IProduct, Property } from "./types";
+import { IMarketplace, IProduct, IProductExtended, Property } from "./types";
+import { v4 as uuidv4 } from 'uuid';
 
 export class Marketplace {
     #marketplace: IMarketplace
@@ -16,14 +17,16 @@ export class Marketplace {
     }
 }
 
-export class Product {
-    product: IProduct
+export class ProductExtended {
+    #product: IProductExtended
 
     // if no marketplaces are passed, then we assume that all marketplaces should be added
-    constructor(id: string | number, name: string, marketplaces?: Marketplace[]) {
-        this.product = {
+    constructor({id = "", name = "", isEdited = false, marketplaces}: {id?: string | number, name?: string, isEdited?: boolean, marketplaces?: Marketplace[]}) {
+        this.#product = {
+            intrinsicId: uuidv4(),
             id,
             name,
+            isEdited,
             marketplaces: marketplaces ? marketplaces.map(mp => {
                 return {
                     name: mp.get().name,
@@ -37,4 +40,13 @@ export class Product {
             })
         };
     }
+    get() {
+        return this.#product;
+    }
+}
+
+export function addIsEditedProperty(products: IProduct[]): IProductExtended[] {
+    return products.map(product => {
+        return {...product, isEdited: false}
+    })
 }

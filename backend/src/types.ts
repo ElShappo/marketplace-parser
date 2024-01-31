@@ -1,0 +1,1 @@
+export {IProduct} from '../../frontend/src/types'
