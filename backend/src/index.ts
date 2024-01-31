@@ -2,11 +2,13 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import db from './db';
 import { IProduct } from "./types";
+import cors from 'cors';
 
 dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
+app.use(cors())
 
 const port = process.env.PORT || 3001;
 
@@ -56,6 +58,7 @@ app.post('/addProducts', (req: Request, res: Response) => {
   try {
     const insert = db.prepare('INSERT INTO Products (id, name, marketplaces) VALUES (@id, @name, @marketplaces)');
     const products = req.body as IProduct[];
+    console.log(products);
     
     const insertMany = db.transaction((products: IProduct[]) => {
       for (const product of products) insert.run(product);

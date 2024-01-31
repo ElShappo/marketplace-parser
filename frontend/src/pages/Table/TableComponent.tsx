@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -21,27 +21,33 @@ import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
-import { columns, sampleProducts } from "../../data";
+import { columns } from "../../data";
 import {
   IMarketplace,
+  IProduct,
   IProductExtended,
-  ProductRef,
   Property,
 } from "../../types";
-import { ProductExtended, addIsEditedProperty } from "../../utils";
-import { observer } from "mobx-react-lite";
+import {
+  ProductExtended,
+  addAndCreateNew,
+  addIsEditedProperty,
+  changeId,
+  changeIsEdited,
+  changeName,
+  deleteAndCreateNew,
+  updateAndCreateNew,
+} from "../../utils";
 
-const TableComponent = observer(() => {
+const TableComponent = () => {
   const [filterValue, setFilterValue] = React.useState("");
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>({
     column: "id",
     direction: "ascending",
   });
-  const [products, setProducts] = useState<IProductExtended[]>([]);
-
-  console.log(products);
-
+  const [products, setProducts] = useState<IProductExtended[]>([]); // resembles current rows state on the frontend
+  const [checkpoint, setCheckpoint] = useState<IProductExtended[]>([]); // resembles db rows state on the backend
   const [page, setPage] = React.useState(1);
   const hasSearchFilter = Boolean(filterValue);
 
@@ -90,56 +96,62 @@ const TableComponent = observer(() => {
   //   }
   // };
 
-  const productRefs = useRef<ProductRef[]>([]);
+  async function onSave(product: IProductExtended) {
+    const ids = new Set(products.map((product) => product.id));
+    const names = new Set(products.map((product) => product.name));
+
+    if (
+      product.id &&
+      product.name &&
+      !ids.has(product.id) &&
+      !names.has(product.name)
+    ) {
+      changeIsEdited(products, product.intrinsicId, false);
+    }
+    try {
+      const res = await fetch("http://localhost:3001/addProducts", {
+        method: "POST",
+        body: JSON.stringify(product),
+      });
+      if (res.ok) {
+        console.log("success!");
+      } else {
+        console.error("server error!");
+      }
+    } catch (error) {
+      console.error("client error!");
+    }
+  }
+
+  async function onCancel(product: IProductExtended) {
+    console.log("oncancel fired");
+    const checkpointedProduct = checkpoint.find(
+      (pr) => pr.intrinsicId === product.intrinsicId
+    )!;
+    updateAndCreateNew(products, checkpointedProduct);
+  }
+
+  function onView(product: IProductExtended) {
+    console.log("onview fired");
+    setProducts(changeIsEdited(products, product.intrinsicId, false));
+  }
+
+  function onEdit(product: IProductExtended) {
+    console.log("onedit fired");
+    setProducts(changeIsEdited(products, product.intrinsicId, true));
+  }
+  function onDelete(product: IProductExtended) {
+    console.log("ondelete fired");
+    setProducts(deleteAndCreateNew(products, product));
+  }
 
   function addProduct() {
+    console.log("onaddproduct fired");
     const newProduct = new ProductExtended({ isEdited: true }).get();
-    setProducts([...products, newProduct]);
-    productRefs.current.push({
-      intrinsicId: newProduct.intrinsicId,
-      id: newProduct.id,
-      name: newProduct.name,
-    });
+    setProducts(() => addAndCreateNew(products, newProduct));
   }
 
-  // function onSave(product: IProductExtended) {
-
-  // }
-
-  function onView(id: string | number) {
-    const productWithThatId = products.find(
-      (product) => String(product.intrinsicId) === String(id)
-    );
-    if (productWithThatId!.isEdited) {
-      setProducts([
-        ...products.filter(
-          (product) => String(product.intrinsicId) !== String(id)
-        ),
-        { ...productWithThatId!, isEdited: false },
-      ]);
-    }
-  }
-  function onEdit(id: string | number) {
-    const productWithThatId = products.find(
-      (product) => String(product.intrinsicId) === String(id)
-    );
-    if (!productWithThatId!.isEdited) {
-      setProducts([
-        ...products.filter(
-          (product) => String(product.intrinsicId) !== String(id)
-        ),
-        { ...productWithThatId!, isEdited: true },
-      ]);
-    }
-  }
-  function onDelete(id: string | number) {
-    console.log(id);
-    setProducts([
-      ...products.filter(
-        (product) => String(product.intrinsicId) !== String(id)
-      ),
-    ]);
-  }
+  console.log(products);
 
   const renderCell = React.useCallback(
     (product: IProductExtended, columnKey: React.Key) => {
@@ -201,10 +213,14 @@ const TableComponent = observer(() => {
                 <DropdownTrigger>
                   {product.isEdited ? (
                     <div className="flex gap-2">
-                      <Button color="primary" size="sm" onClick={onSave}>
+                      <Button
+                        color="primary"
+                        size="sm"
+                        onClick={() => onSave(product)}
+                      >
                         Save
                       </Button>
-                      <Button size="sm" onClick={onCancel}>
+                      <Button size="sm" onClick={() => onCancel(product)}>
                         Cancel
                       </Button>
                     </div>
@@ -214,22 +230,19 @@ const TableComponent = observer(() => {
                       size="sm"
                       variant="light"
                       data-key={product.id}
-                      onClick={(evt) => {
-                        id.current = evt.currentTarget.dataset.key;
-                      }}
                     >
                       <MoreVertIcon className="text-default-400" />
                     </Button>
                   )}
                 </DropdownTrigger>
                 <DropdownMenu>
-                  <DropdownItem onClick={() => onView(product.intrinsicId)}>
+                  <DropdownItem onClick={() => onView(product)}>
                     View
                   </DropdownItem>
-                  <DropdownItem onClick={() => onEdit(product.intrinsicId)}>
+                  <DropdownItem onClick={() => onEdit(product)}>
                     Edit
                   </DropdownItem>
-                  <DropdownItem onClick={() => onDelete(product.intrinsicId)}>
+                  <DropdownItem onClick={() => onDelete(product)}>
                     Delete
                   </DropdownItem>
                 </DropdownMenu>
@@ -240,8 +253,20 @@ const TableComponent = observer(() => {
           if (product.isEdited) {
             return (
               <Input
+                type="text"
                 variant="flat"
                 label={String(columnKey)}
+                // value={}
+                onValueChange={(val) => {
+                  // console.log(product);
+                  console.log(products);
+                  if ((columnKey as keyof IProductExtended) === "id") {
+                    console.log(products);
+                    setProducts(changeId(products, product.intrinsicId, val));
+                  } else {
+                    setProducts(changeName(products, product.intrinsicId, val));
+                  }
+                }}
                 // classNames={{
                 //   input: ["bg-dark"],
                 //   innerWrapper: "bg-dark",
@@ -259,7 +284,7 @@ const TableComponent = observer(() => {
           }
       }
     },
-    []
+    [products]
   );
 
   const onNextPage = React.useCallback(() => {
@@ -313,7 +338,7 @@ const TableComponent = observer(() => {
             <Button
               color="primary"
               endContent={<AddIcon />}
-              onClick={addProduct}
+              onClick={() => addProduct()}
             >
               Add New
             </Button>
@@ -379,6 +404,16 @@ const TableComponent = observer(() => {
     );
   }, [items.length, page, pages, hasSearchFilter]);
 
+  useEffect(() => {
+    async function fetcher() {
+      const promise = await fetch("http://localhost:3001/getProducts");
+      const res = (await promise.json()) as IProduct[];
+      setProducts(addIsEditedProperty(res));
+      setCheckpoint(addIsEditedProperty(res));
+    }
+    fetcher();
+  }, []);
+
   return (
     <Table
       // isStriped
@@ -423,6 +458,6 @@ const TableComponent = observer(() => {
       </TableBody>
     </Table>
   );
-});
+};
 
 export default TableComponent;
