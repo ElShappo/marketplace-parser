@@ -25,7 +25,7 @@ app.get('/getProducts', (req: Request, res: Response) => {
 app.put('/deleteProducts', (req: Request, res: Response) => {
   try {
     const delete_ = db.prepare('DELETE FROM Products WHERE id = ?');
-    const products = req.body as IProduct[];
+    const products = [req.body] as IProduct[];
     
     const delete_Many = db.transaction((products: IProduct[]) => {
       for (const product of products) delete_.run(product.id);
@@ -41,10 +41,10 @@ app.put('/deleteProducts', (req: Request, res: Response) => {
 app.put('/updateProducts', (req: Request, res: Response) => {
   try {
     const update = db.prepare('UPDATE Products SET id = ?, name = ?, marketplaces = ?');
-    const products = req.body as IProduct[];
+    const products = [req.body] as IProduct[];
     
     const updateMany = db.transaction((products: IProduct[]) => {
-      for (const product of products) update.run(product.id, product.name, product.marketplaces);
+      for (const product of products) update.run(product.id, product.name, JSON.stringify(product.marketplaces) );
     });
     
     updateMany(products);
@@ -57,11 +57,15 @@ app.put('/updateProducts', (req: Request, res: Response) => {
 app.post('/addProducts', (req: Request, res: Response) => {
   try {
     const insert = db.prepare('INSERT INTO Products (id, name, marketplaces) VALUES (@id, @name, @marketplaces)');
-    const products = req.body as IProduct[];
+    const products = [req.body] as IProduct[];
     console.log(products);
     
     const insertMany = db.transaction((products: IProduct[]) => {
-      for (const product of products) insert.run(product);
+      for (const product of products) insert.run({
+        id: String(product.id),
+        name: product.name,
+        marketplaces: JSON.stringify(product.marketplaces)
+      });
     });
     
     insertMany(products);

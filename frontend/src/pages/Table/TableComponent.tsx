@@ -22,12 +22,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import { columns } from "../../data";
-import {
-  IMarketplace,
-  IProduct,
-  IProductExtended,
-  Property,
-} from "../../types";
+import { IMarketplace, IProductExtended, Property } from "../../types";
 import {
   ProductExtended,
   addAndCreateNew,
@@ -96,30 +91,81 @@ const TableComponent = () => {
   //   }
   // };
 
-  async function onSave(product: IProductExtended) {
-    const ids = new Set(products.map((product) => product.id));
-    const names = new Set(products.map((product) => product.name));
+  function onIdChange(product: IProductExtended, newId: string | number) {
+    setProducts(changeId(products, product.intrinsicId, newId));
+  }
 
-    if (
-      product.id &&
-      product.name &&
-      !ids.has(product.id) &&
-      !names.has(product.name)
-    ) {
-      changeIsEdited(products, product.intrinsicId, false);
-    }
-    try {
-      const res = await fetch("http://localhost:3001/addProducts", {
-        method: "POST",
-        body: JSON.stringify(product),
-      });
-      if (res.ok) {
-        console.log("success!");
-      } else {
-        console.error("server error!");
+  function onNameChange(product: IProductExtended, newName: string) {
+    setProducts(changeName(products, product.intrinsicId, newName));
+  }
+
+  async function onSave(product: IProductExtended) {
+    const ids = new Set(checkpoint.map((product) => product.id));
+    const intrinsicIds = new Set(
+      checkpoint.map((product) => product.intrinsicId)
+    );
+    const names = new Set(checkpoint.map((product) => product.name));
+
+    // id and name shouldn't be empty
+    if (product.id && product.name) {
+      // if we modify already existing snapshot of the row
+      if (intrinsicIds.has(product.intrinsicId)) {
+        // check that the new id and the new name are unique among other snapshotted rows
+        const hasDuplicateId = checkpoint.some(
+          (pr) =>
+            pr.intrinsicId !== product.intrinsicId &&
+            (pr.id === product.id || pr.name === product.name)
+        );
+        if (hasDuplicateId) {
+          console.warn(
+            "the row which previously had already existed was assigned a duplicate id or name"
+          );
+          return;
+        }
+        setProducts(() => changeIsEdited(products, product.intrinsicId, false));
+        console.log("has existed previously");
+
+        try {
+          const res = await fetch("http://localhost:3001/updateProducts", {
+            method: "POST",
+            body: JSON.stringify(product),
+            headers: {
+              "Content-Type": "application/json;charset=utf-8",
+            },
+          });
+          if (res.ok) {
+            console.log("success!");
+          } else {
+            console.error("server error!");
+          }
+        } catch (error) {
+          console.error("client error!");
+        }
+        // if the row hasn't existed previously
+      } else if (!ids.has(product.id) && !names.has(product.name)) {
+        setProducts(() => changeIsEdited(products, product.intrinsicId, false));
+        console.log("has not existed previously");
+        console.log(product);
+
+        try {
+          const res = await fetch("http://localhost:3001/addProducts", {
+            method: "POST",
+            body: JSON.stringify(product),
+            headers: {
+              "Content-Type": "application/json;charset=utf-8",
+            },
+          });
+          if (res.ok) {
+            console.log("success!");
+          } else {
+            console.error("server error!");
+          }
+        } catch (error) {
+          console.error("client error!");
+        }
       }
-    } catch (error) {
-      console.error("client error!");
+    } else {
+      console.warn("such product already exists");
     }
   }
 
@@ -127,8 +173,12 @@ const TableComponent = () => {
     console.log("oncancel fired");
     const checkpointedProduct = checkpoint.find(
       (pr) => pr.intrinsicId === product.intrinsicId
-    )!;
-    updateAndCreateNew(products, checkpointedProduct);
+    );
+    if (!checkpointedProduct) {
+      setProducts(deleteAndCreateNew(products, product));
+    } else {
+      setProducts(updateAndCreateNew(products, checkpointedProduct));
+    }
   }
 
   function onView(product: IProductExtended) {
@@ -140,9 +190,27 @@ const TableComponent = () => {
     console.log("onedit fired");
     setProducts(changeIsEdited(products, product.intrinsicId, true));
   }
-  function onDelete(product: IProductExtended) {
+  async function onDelete(product: IProductExtended) {
     console.log("ondelete fired");
     setProducts(deleteAndCreateNew(products, product));
+
+    try {
+      const res = await fetch("http://localhost:3001/deleteProducts", {
+        method: "PUT",
+        body: JSON.stringify(product),
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+      });
+
+      if (res.ok) {
+        console.log("success!");
+      } else {
+        console.error("server error!");
+      }
+    } catch (error) {
+      console.error("client error!");
+    }
   }
 
   function addProduct() {
@@ -150,8 +218,6 @@ const TableComponent = () => {
     const newProduct = new ProductExtended({ isEdited: true }).get();
     setProducts(() => addAndCreateNew(products, newProduct));
   }
-
-  console.log(products);
 
   const renderCell = React.useCallback(
     (product: IProductExtended, columnKey: React.Key) => {
@@ -236,13 +302,18 @@ const TableComponent = () => {
                   )}
                 </DropdownTrigger>
                 <DropdownMenu>
-                  <DropdownItem onClick={() => onView(product)}>
+                  <DropdownItem onClick={() => onView(product)} key="view">
                     View
                   </DropdownItem>
-                  <DropdownItem onClick={() => onEdit(product)}>
+                  <DropdownItem onClick={() => onEdit(product)} key="edit">
                     Edit
                   </DropdownItem>
-                  <DropdownItem onClick={() => onDelete(product)}>
+                  <DropdownItem
+                    className="text-danger"
+                    color="danger"
+                    onClick={() => onDelete(product)}
+                    key="delete"
+                  >
                     Delete
                   </DropdownItem>
                 </DropdownMenu>
@@ -256,25 +327,22 @@ const TableComponent = () => {
                 type="text"
                 variant="flat"
                 label={String(columnKey)}
-                // value={}
+                value={
+                  columnKey === "id"
+                    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (product.id as any)
+                    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (product.name as any)
+                }
                 onValueChange={(val) => {
-                  // console.log(product);
-                  console.log(products);
                   if ((columnKey as keyof IProductExtended) === "id") {
-                    console.log(products);
-                    setProducts(changeId(products, product.intrinsicId, val));
+                    // setProducts(changeId(products, product.intrinsicId, val));
+                    onIdChange(product, val);
                   } else {
-                    setProducts(changeName(products, product.intrinsicId, val));
+                    // setProducts(changeName(products, product.intrinsicId, val));
+                    onNameChange(product, val);
                   }
                 }}
-                // classNames={{
-                //   input: ["bg-dark"],
-                //   innerWrapper: "bg-dark",
-                //   inputWrapper: ["bg-dark"],
-                //   mainWrapper: ["bg-dark"],
-                //   base: ["bg-dark"],
-                //   helperWrapper: ["bg-dark"],
-                // }}
               />
             );
           } else {
@@ -407,7 +475,12 @@ const TableComponent = () => {
   useEffect(() => {
     async function fetcher() {
       const promise = await fetch("http://localhost:3001/getProducts");
-      const res = (await promise.json()) as IProduct[];
+      const res = await promise.json();
+      res.forEach(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (row: any) => (row.marketplaces = JSON.parse(row.marketplaces))
+      );
+      console.log(res);
       setProducts(addIsEditedProperty(res));
       setCheckpoint(addIsEditedProperty(res));
     }

@@ -46,8 +46,8 @@ export class ProductExtended {
 }
 
 export function addIsEditedProperty(products: IProduct[], isEdited: boolean = false): IProductExtended[] {
-    const clone = structuredClone(products);
-    return clone.map(product => {
+    const shallowCopy = [...products];
+    return shallowCopy.map(product => {
         return {...product, isEdited}
     });
 }
@@ -59,22 +59,22 @@ export function deleteAndCreateNew(arr: IProductExtended[], productToDelete: IPr
 
 export function addAndCreateNew(arr: IProductExtended[], newProduct: IProductExtended): IProductExtended[] {
     console.log('onadd and create new fired');
-    const arrClone = structuredClone(arr);
+    const arrShallowCopy = [...arr];
     const productClone = structuredClone(newProduct);
-    arrClone.push(productClone);
+    arrShallowCopy.push(productClone);
 
-    return arrClone;
+    return arrShallowCopy;
 }
 
 export function updateAndCreateNew(arr: IProductExtended[], replacingProduct: IProductExtended): IProductExtended[] {
     console.log('onupdate and create new fired');
-    const arrClone = structuredClone(arr);
+    const arrShallowCopy = [...arr];
     const productClone = structuredClone(replacingProduct);
 
     const index = arr.findIndex(product => String(product.intrinsicId) === String(replacingProduct.intrinsicId));
-    arrClone[index] = productClone;
+    arrShallowCopy[index] = productClone;
 
-    return arrClone;
+    return arrShallowCopy;
 }
 
 export function toggleIsEdited(arr: IProductExtended[], intrinsicId: string | number) {
@@ -91,7 +91,7 @@ export function changeIsEdited(arr: IProductExtended[], intrinsicId: string | nu
 
 export function changeId(arr: IProductExtended[], intrinsicId: string | number, newId: string | number) {
     const replacingProduct = structuredClone(arr.find(pr => String(pr.intrinsicId) === String(intrinsicId))!);
-    replacingProduct!.intrinsicId = newId;
+    replacingProduct!.id = newId;
     return updateAndCreateNew(arr, replacingProduct);
 }
 
