@@ -19,10 +19,13 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
+import UploadIcon from "@mui/icons-material/Upload";
+import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import { columns } from "../../data";
-import { IMarketplace, IProductExtended } from "../../types";
+import { IExcelRow, IMarketplace, IProductExtended } from "../../types";
 import { ProductExtended, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
+import Excel from "exceljs";
 
 const TableComponent = () => {
   const [filterValue, setFilterValue] = React.useState("");
@@ -475,6 +478,37 @@ const TableComponent = () => {
     setPage(1);
   }, []);
 
+  async function handleImport(evt: InputEvent) {
+    const inputElement = evt.target as HTMLInputElement;
+    const files = inputElement.files;
+
+    if (files) {
+      const file = files[0];
+      const workbook = new Excel.Workbook();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await workbook.xlsx.load(file as any);
+      console.log(workbook);
+
+      const worksheet = workbook.getWorksheet("Лист1");
+      console.log(worksheet);
+
+      const rows: IExcelRow[] = [];
+
+      worksheet?.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          const curr = { id: "", name: "" };
+          row.eachCell((cell, cellNumber) => {
+            cellNumber === 1
+              ? (curr.id = String(cell.value))
+              : (curr.name = String(cell.value));
+          });
+          rows.push(curr);
+        }
+      });
+      console.log(rows);
+    }
+  }
+
   const topContent = React.useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -489,6 +523,15 @@ const TableComponent = () => {
             onValueChange={onSearchChange}
           />
           <div className="flex gap-3">
+            <Input
+              color="primary"
+              endContent={<UploadIcon />}
+              type="file"
+              accept=".xlsx"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onInput={handleImport as any}
+            ></Input>
+
             <Button
               color="primary"
               endContent={<AddIcon />}
@@ -527,32 +570,44 @@ const TableComponent = () => {
 
   const bottomContent = React.useMemo(() => {
     return (
-      <div className="py-2 px-2 flex flex-wrap justify-between items-center">
-        <Pagination
-          isCompact
-          showControls
-          showShadow
-          color="primary"
-          page={page}
-          total={pages}
-          onChange={setPage}
-        />
-        <div className="hidden sm:flex w-[30%] justify-end gap-2">
+      <div className="flex flex-col gap-4">
+        <div className="py-2 px-2 flex flex-wrap justify-between items-center">
+          <Pagination
+            isCompact
+            showControls
+            showShadow
+            color="primary"
+            page={page}
+            total={pages}
+            onChange={setPage}
+          />
+          <div className="hidden sm:flex w-[30%] justify-end gap-2">
+            <Button
+              isDisabled={pages === 1}
+              size="sm"
+              variant="flat"
+              onPress={onPreviousPage}
+            >
+              Previous
+            </Button>
+            <Button
+              isDisabled={pages === 1}
+              size="sm"
+              variant="flat"
+              onPress={onNextPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+        <div className="flex justify-center">
           <Button
-            isDisabled={pages === 1}
-            size="sm"
-            variant="flat"
-            onPress={onPreviousPage}
+            color="warning"
+            endContent={<PlayCircleFilledWhiteIcon />}
+            size="lg"
+            className="font-bold uppercase"
           >
-            Previous
-          </Button>
-          <Button
-            isDisabled={pages === 1}
-            size="sm"
-            variant="flat"
-            onPress={onNextPage}
-          >
-            Next
+            Parse
           </Button>
         </div>
       </div>

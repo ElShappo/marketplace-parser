@@ -26,3 +26,8 @@ export type ProductRef = {
   id: string
   name: string
 }
+
+export interface IExcelRow {
+  id: string
+  name: string
+}
