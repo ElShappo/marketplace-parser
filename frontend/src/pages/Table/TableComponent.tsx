@@ -395,6 +395,7 @@ const TableComponent = () => {
           if (product.isEdited) {
             return (
               <Input
+                size="sm"
                 type="text"
                 variant="flat"
                 label={String(columnKey)}
@@ -511,11 +512,19 @@ const TableComponent = () => {
             onClear={() => onClear()}
             onValueChange={onSearchChange}
           />
-          <div className="flex items-stretch gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <label
+              htmlFor="excel"
+              className="text-center flex-initial max-sm:pt-2"
+            >
+              Import XLSX
+            </label>
             <Input
+              className="w-auto"
+              id="excel"
               size="sm"
               color="primary"
-              // endContent={<UploadIcon />}
+              endContent={<UploadIcon />}
               type="file"
               accept=".xlsx"
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -523,7 +532,7 @@ const TableComponent = () => {
             ></Input>
 
             <Button
-              className="p-6 px-8"
+              className="flex-initial"
               color="primary"
               endContent={<AddIcon />}
               onClick={() => addProduct()}
