@@ -73,17 +73,6 @@ const TableComponent = () => {
   //   });
   // }, [sortDescriptor, items]);
 
-  // const handleClose = (marketplaceToRemove: IMarketplace) => {
-  //   setMarketplacesLabels(
-  //     martketplacesLabels.filter(
-  //       (marketplace) => marketplace !== marketplaceToRemove
-  //     )
-  //   );
-  //   if (martketplacesLabels.length === 1) {
-  //     setMarketplacesLabels(initialMarketplacesLabels);
-  //   }
-  // };
-
   const deleteAndCreateNew = useCallback(
     (productToDelete: IProductExtended) => {
       console.log("ondelete and create new fired");
@@ -512,7 +501,7 @@ const TableComponent = () => {
   const topContent = React.useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between gap-3 items-end">
+        <div className="flex justify-between gap-3 items-end flex-wrap">
           <Input
             isClearable
             className="w-full sm:max-w-[44%] text-dark"
@@ -522,10 +511,11 @@ const TableComponent = () => {
             onClear={() => onClear()}
             onValueChange={onSearchChange}
           />
-          <div className="flex gap-3">
+          <div className="flex items-stretch gap-3">
             <Input
+              size="sm"
               color="primary"
-              endContent={<UploadIcon />}
+              // endContent={<UploadIcon />}
               type="file"
               accept=".xlsx"
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -533,6 +523,7 @@ const TableComponent = () => {
             ></Input>
 
             <Button
+              className="p-6 px-8"
               color="primary"
               endContent={<AddIcon />}
               onClick={() => addProduct()}
