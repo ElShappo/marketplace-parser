@@ -1,15 +1,14 @@
-import { availableMarketplaces, availableProperties } from "./constants";
-import { IMarketplace, IProduct, IProductExtended, Property } from "./types";
+import { availableMarketplaces } from "./constants";
+import { IMarketplace, IProduct, IProductExtended } from "./types";
 import { v4 as uuidv4 } from 'uuid';
 
 export class Marketplace {
     #marketplace: IMarketplace
 
-    // if no properties are passed, then we assume that all properties should be added
-    constructor(name: typeof availableMarketplaces[number], properties?: Set<Property>) {
+    constructor(name: typeof availableMarketplaces[number], link: string | undefined) {
         this.#marketplace = {
             name,
-            properties: properties ? properties : new Set(availableProperties)
+            link
         }
     }
     get() {
@@ -21,7 +20,7 @@ export class ProductExtended {
     #product: IProductExtended
 
     // if no marketplaces are passed, then we assume that all marketplaces should be added
-    constructor({id = "", name = "", isEdited = false, marketplaces}: {id?: string | number, name?: string, isEdited?: boolean, marketplaces?: Marketplace[]}) {
+    constructor({id = "", name = "", isEdited = false, marketplaces}: {id?: string, name?: string, isEdited?: boolean, marketplaces?: Marketplace[]}) {
         this.#product = {
             intrinsicId: uuidv4(),
             id,
@@ -30,12 +29,12 @@ export class ProductExtended {
             marketplaces: marketplaces ? marketplaces.map(mp => {
                 return {
                     name: mp.get().name,
-                    properties: mp.get().properties
+                    link: mp.get().link
                 }
             }) : availableMarketplaces.map(mp => {
                 return {
                     name: mp,
-                    properties: new Set(availableProperties)
+                    link: ""
                 }
             })
         };

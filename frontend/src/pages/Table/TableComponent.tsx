@@ -12,17 +12,15 @@ import {
   Dropdown,
   DropdownMenu,
   DropdownItem,
-  Chip,
   Pagination,
   SortDescriptor,
-  Divider,
+  Link,
 } from "@nextui-org/react";
 import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
-import CloseIcon from "@mui/icons-material/Close";
 import { columns } from "../../data";
-import { IMarketplace, IProductExtended, Property } from "../../types";
+import { IMarketplace, IProductExtended } from "../../types";
 import { ProductExtended, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
 
@@ -136,7 +134,7 @@ const TableComponent = () => {
   );
 
   const changeId = useCallback(
-    (product: IProductExtended, newId: string | number) => {
+    (product: IProductExtended, newId: string) => {
       const replacingProduct = structuredClone(product);
       replacingProduct.id = newId;
       updateAndCreateNew(replacingProduct);
@@ -163,7 +161,7 @@ const TableComponent = () => {
 
   const renderCell = React.useCallback(
     (product: IProductExtended, columnKey: React.Key) => {
-      function onIdChange(product: IProductExtended, newId: string | number) {
+      function onIdChange(product: IProductExtended, newId: string) {
         changeId(product, newId);
       }
 
@@ -177,14 +175,6 @@ const TableComponent = () => {
           checkpoint.map((product) => product.intrinsicId)
         );
         const names = new Set(checkpoint.map((product) => product.name));
-
-        const marketplaces = product.marketplaces.map((marketplace) => {
-          return {
-            name: marketplace.name,
-            properties: Array.from(marketplace.properties),
-          };
-        });
-        product.marketplaces = marketplaces;
 
         // id and name shouldn't be empty
         if (product.id && product.name) {
@@ -302,9 +292,11 @@ const TableComponent = () => {
         const checkpointedProduct = checkpoint.find(
           (pr) => pr.intrinsicId === product.intrinsicId
         );
+        console.log(checkpointedProduct);
         if (!checkpointedProduct) {
           deleteAndCreateNew(product);
         } else {
+          console.log("updating...");
           updateAndCreateNew(checkpointedProduct);
         }
       }
@@ -344,54 +336,26 @@ const TableComponent = () => {
       const cellValue = product[columnKey as keyof IProductExtended];
       switch (columnKey) {
         case "marketplaces":
-          return (cellValue as IMarketplace[]).map((marketplace) => {
-            return (
-              <div className="text-dark" key={marketplace.name}>
-                <div className="py-2 flex items-center gap-2">
-                  <section className="bg-red-400 rounded-xl flex-auto flex items-stretch content-stretch p-3 gap-3">
-                    <Chip
-                      key={`${product.intrinsicId}, ${marketplace.name}`}
-                      className="font-light"
-                      color="danger"
+          return (
+            <div className="flex gap-4">
+              {(cellValue as IMarketplace[]).every(
+                (marketplace) => !marketplace.link
+              ) ? (
+                <p className="italic text-slate-400">No info</p>
+              ) : (
+                (cellValue as IMarketplace[]).map((marketplace) => {
+                  return (
+                    <Link
+                      href={marketplace.link ? marketplace.link : "#"}
+                      underline="always"
                     >
                       {marketplace.name}
-                    </Chip>
-                    <div>
-                      <Divider
-                        orientation="vertical"
-                        className="bg-neutral-800"
-                      />
-                    </div>
-                    {Array.from(marketplace.properties).map(
-                      (property: Property) => {
-                        return (
-                          <Chip
-                            key={`${product.intrinsicId}, ${marketplace.name}, ${property}`}
-                            className="font-light"
-                            color="warning"
-                            // onClose={isEdited ? }
-                          >
-                            {property}
-                          </Chip>
-                        );
-                      }
-                    )}
-                  </section>
-                  {product.isEdited ? (
-                    <Button
-                      isIconOnly
-                      variant="light"
-                      color="danger"
-                      className="grow-0"
-                    >
-                      <CloseIcon />
-                    </Button>
-                  ) : null}
-                </div>
-                <Divider />
-              </div>
-            );
-          });
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          );
         case "actions":
           return (
             <div className="relative flex justify-end items-center gap-2">
