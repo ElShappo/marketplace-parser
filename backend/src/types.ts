@@ -1,1 +1,1 @@
-export {IProduct} from '../../frontend/src/types'
+export {IProduct, IProductExtended} from '../../frontend/src/types'

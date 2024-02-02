@@ -8,7 +8,7 @@ export type Property = typeof availableProperties[number]
 
 export interface IMarketplace {
   name: typeof availableMarketplaces[number]
-  properties: Set<Property>
+  properties: Set<Property> | Property[]
 }
 
 export interface IProduct {

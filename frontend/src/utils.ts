@@ -52,52 +52,5 @@ export function addIsEditedProperty(products: IProduct[], isEdited: boolean = fa
     });
 }
 
-export function deleteAndCreateNew(arr: IProductExtended[], productToDelete: IProductExtended): IProductExtended[] {
-    console.log('ondelete and create new fired');
-    return arr.filter(product => product.intrinsicId !== productToDelete.intrinsicId);
-}
 
-export function addAndCreateNew(arr: IProductExtended[], newProduct: IProductExtended): IProductExtended[] {
-    console.log('onadd and create new fired');
-    const arrShallowCopy = [...arr];
-    const productClone = structuredClone(newProduct);
-    arrShallowCopy.push(productClone);
-
-    return arrShallowCopy;
-}
-
-export function updateAndCreateNew(arr: IProductExtended[], replacingProduct: IProductExtended): IProductExtended[] {
-    console.log('onupdate and create new fired');
-    const arrShallowCopy = [...arr];
-    const productClone = structuredClone(replacingProduct);
-
-    const index = arr.findIndex(product => String(product.intrinsicId) === String(replacingProduct.intrinsicId));
-    arrShallowCopy[index] = productClone;
-
-    return arrShallowCopy;
-}
-
-export function toggleIsEdited(arr: IProductExtended[], intrinsicId: string | number) {
-    const replacingProduct = structuredClone(arr.find(pr => String(pr.intrinsicId) === String(intrinsicId))!);
-    replacingProduct!.isEdited = !replacingProduct!.isEdited;
-    return updateAndCreateNew(arr, replacingProduct);
-}
-
-export function changeIsEdited(arr: IProductExtended[], intrinsicId: string | number, newIsEditedVal: boolean) {
-    const replacingProduct = structuredClone(arr.find(pr => String(pr.intrinsicId) === String(intrinsicId))!);
-    replacingProduct!.isEdited = newIsEditedVal;
-    return updateAndCreateNew(arr, replacingProduct);
-}
-
-export function changeId(arr: IProductExtended[], intrinsicId: string | number, newId: string | number) {
-    const replacingProduct = structuredClone(arr.find(pr => String(pr.intrinsicId) === String(intrinsicId))!);
-    replacingProduct!.id = newId;
-    return updateAndCreateNew(arr, replacingProduct);
-}
-
-export function changeName(arr: IProductExtended[], intrinsicId: string | number, newName: string) {
-    const replacingProduct = structuredClone(arr.find(pr => String(pr.intrinsicId) === String(intrinsicId))!);
-    replacingProduct!.name = newName;
-    return updateAndCreateNew(arr, replacingProduct);
-}
 

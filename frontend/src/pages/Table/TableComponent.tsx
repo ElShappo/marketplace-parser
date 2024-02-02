@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -23,16 +23,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import { columns } from "../../data";
 import { IMarketplace, IProductExtended, Property } from "../../types";
-import {
-  ProductExtended,
-  addAndCreateNew,
-  addIsEditedProperty,
-  changeId,
-  changeIsEdited,
-  changeName,
-  deleteAndCreateNew,
-  updateAndCreateNew,
-} from "../../utils";
+import { ProductExtended, addIsEditedProperty } from "../../utils";
+import { Store } from "react-notifications-component";
 
 const TableComponent = () => {
   const [filterValue, setFilterValue] = React.useState("");
@@ -55,7 +47,7 @@ const TableComponent = () => {
       );
     }
     return filteredUsers;
-  }, [products, filterValue]);
+  }, [products, hasSearchFilter, filterValue]);
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -66,19 +58,19 @@ const TableComponent = () => {
     return filteredItems.slice(start, end);
   }, [page, filteredItems, rowsPerPage]);
 
-  const sortedItems = React.useMemo(() => {
-    return [...items].sort((a: IProductExtended, b: IProductExtended) => {
-      const first = a[sortDescriptor.column as keyof IProductExtended] as
-        | number
-        | string;
-      const second = b[sortDescriptor.column as keyof IProductExtended] as
-        | number
-        | string;
-      const cmp = first < second ? -1 : first > second ? 1 : 0;
+  // const sortedItems = React.useMemo(() => {
+  //   return [...items].sort((a: IProductExtended, b: IProductExtended) => {
+  //     const first = a[sortDescriptor.column as keyof IProductExtended] as
+  //       | number
+  //       | string;
+  //     const second = b[sortDescriptor.column as keyof IProductExtended] as
+  //       | number
+  //       | string;
+  //     const cmp = first < second ? -1 : first > second ? 1 : 0;
 
-      return sortDescriptor.direction === "descending" ? -cmp : cmp;
-    });
-  }, [sortDescriptor, items]);
+  //     return sortDescriptor.direction === "descending" ? -cmp : cmp;
+  //   });
+  // }, [sortDescriptor, items]);
 
   // const handleClose = (marketplaceToRemove: IMarketplace) => {
   //   setMarketplacesLabels(
@@ -91,136 +83,264 @@ const TableComponent = () => {
   //   }
   // };
 
-  function onIdChange(product: IProductExtended, newId: string | number) {
-    setProducts(changeId(products, product.intrinsicId, newId));
-  }
+  const deleteAndCreateNew = useCallback(
+    (productToDelete: IProductExtended) => {
+      console.log("ondelete and create new fired");
+      console.log(productToDelete);
+      setProducts((products) =>
+        products.filter(
+          (product) => product.intrinsicId !== productToDelete.intrinsicId
+        )
+      );
+    },
+    []
+  );
 
-  function onNameChange(product: IProductExtended, newName: string) {
-    setProducts(changeName(products, product.intrinsicId, newName));
-  }
+  const addAndCreateNew = useCallback((newProduct: IProductExtended) => {
+    console.log("onadd and create new fired");
+    setProducts((products) => {
+      const arrShallowCopy = [...products];
+      const productClone = structuredClone(newProduct);
+      arrShallowCopy.push(productClone);
 
-  async function onSave(product: IProductExtended) {
-    const ids = new Set(checkpoint.map((product) => product.id));
-    const intrinsicIds = new Set(
-      checkpoint.map((product) => product.intrinsicId)
-    );
-    const names = new Set(checkpoint.map((product) => product.name));
+      return arrShallowCopy;
+    });
+  }, []);
 
-    // id and name shouldn't be empty
-    if (product.id && product.name) {
-      // if we modify already existing snapshot of the row
-      if (intrinsicIds.has(product.intrinsicId)) {
-        // check that the new id and the new name are unique among other snapshotted rows
-        const hasDuplicateId = checkpoint.some(
-          (pr) =>
-            pr.intrinsicId !== product.intrinsicId &&
-            (pr.id === product.id || pr.name === product.name)
+  const updateAndCreateNew = useCallback(
+    (replacingProduct: IProductExtended) => {
+      console.log("onupdate and create new fired");
+      setProducts((products) => {
+        const arrShallowCopy = [...products];
+        const productClone = structuredClone(replacingProduct);
+
+        const index = products.findIndex(
+          (product) =>
+            String(product.intrinsicId) === String(replacingProduct.intrinsicId)
         );
-        if (hasDuplicateId) {
-          console.warn(
-            "the row which previously had already existed was assigned a duplicate id or name"
-          );
-          return;
-        }
-        setProducts(() => changeIsEdited(products, product.intrinsicId, false));
-        console.log("has existed previously");
+        arrShallowCopy[index] = productClone;
 
-        try {
-          const res = await fetch("http://localhost:3001/updateProducts", {
-            method: "POST",
-            body: JSON.stringify(product),
-            headers: {
-              "Content-Type": "application/json;charset=utf-8",
-            },
-          });
-          if (res.ok) {
-            console.log("success!");
-          } else {
-            console.error("server error!");
-          }
-        } catch (error) {
-          console.error("client error!");
-        }
-        // if the row hasn't existed previously
-      } else if (!ids.has(product.id) && !names.has(product.name)) {
-        setProducts(() => changeIsEdited(products, product.intrinsicId, false));
-        console.log("has not existed previously");
-        console.log(product);
-
-        try {
-          const res = await fetch("http://localhost:3001/addProducts", {
-            method: "POST",
-            body: JSON.stringify(product),
-            headers: {
-              "Content-Type": "application/json;charset=utf-8",
-            },
-          });
-          if (res.ok) {
-            console.log("success!");
-          } else {
-            console.error("server error!");
-          }
-        } catch (error) {
-          console.error("client error!");
-        }
-      }
-    } else {
-      console.warn("such product already exists");
-    }
-  }
-
-  async function onCancel(product: IProductExtended) {
-    console.log("oncancel fired");
-    const checkpointedProduct = checkpoint.find(
-      (pr) => pr.intrinsicId === product.intrinsicId
-    );
-    if (!checkpointedProduct) {
-      setProducts(deleteAndCreateNew(products, product));
-    } else {
-      setProducts(updateAndCreateNew(products, checkpointedProduct));
-    }
-  }
-
-  function onView(product: IProductExtended) {
-    console.log("onview fired");
-    setProducts(changeIsEdited(products, product.intrinsicId, false));
-  }
-
-  function onEdit(product: IProductExtended) {
-    console.log("onedit fired");
-    setProducts(changeIsEdited(products, product.intrinsicId, true));
-  }
-  async function onDelete(product: IProductExtended) {
-    console.log("ondelete fired");
-    setProducts(deleteAndCreateNew(products, product));
-
-    try {
-      const res = await fetch("http://localhost:3001/deleteProducts", {
-        method: "PUT",
-        body: JSON.stringify(product),
-        headers: {
-          "Content-Type": "application/json;charset=utf-8",
-        },
+        return arrShallowCopy;
       });
+    },
+    []
+  );
 
-      if (res.ok) {
-        console.log("success!");
-      } else {
-        console.error("server error!");
-      }
-    } catch (error) {
-      console.error("client error!");
-    }
-  }
+  const changeIsEdited = useCallback(
+    (product: IProductExtended, newIsEditedVal: boolean) => {
+      const replacingProduct = structuredClone(product);
+      replacingProduct.isEdited = newIsEditedVal;
+      updateAndCreateNew(replacingProduct);
+    },
+    [updateAndCreateNew]
+  );
 
-  function addProduct() {
+  const changeId = useCallback(
+    (product: IProductExtended, newId: string | number) => {
+      const replacingProduct = structuredClone(product);
+      replacingProduct.id = newId;
+      updateAndCreateNew(replacingProduct);
+    },
+    [updateAndCreateNew]
+  );
+
+  const changeName = useCallback(
+    (product: IProductExtended, newName: string) => {
+      const replacingProduct = structuredClone(product);
+      replacingProduct.name = newName;
+      updateAndCreateNew(replacingProduct);
+    },
+    [updateAndCreateNew]
+  );
+
+  const addProduct = useCallback(() => {
     console.log("onaddproduct fired");
     const newProduct = new ProductExtended({ isEdited: true }).get();
-    setProducts(() => addAndCreateNew(products, newProduct));
-  }
+    addAndCreateNew(newProduct);
+  }, [addAndCreateNew]);
+
+  console.log(products);
 
   const renderCell = React.useCallback(
     (product: IProductExtended, columnKey: React.Key) => {
+      function onIdChange(product: IProductExtended, newId: string | number) {
+        changeId(product, newId);
+      }
+
+      function onNameChange(product: IProductExtended, newName: string) {
+        changeName(product, newName);
+      }
+
+      async function onSave(product: IProductExtended) {
+        const ids = new Set(checkpoint.map((product) => product.id));
+        const intrinsicIds = new Set(
+          checkpoint.map((product) => product.intrinsicId)
+        );
+        const names = new Set(checkpoint.map((product) => product.name));
+
+        const marketplaces = product.marketplaces.map((marketplace) => {
+          return {
+            name: marketplace.name,
+            properties: Array.from(marketplace.properties),
+          };
+        });
+        product.marketplaces = marketplaces;
+
+        // id and name shouldn't be empty
+        if (product.id && product.name) {
+          // if we modify already existing snapshot of the row
+          if (intrinsicIds.has(product.intrinsicId)) {
+            // check that the new id and the new name are unique among other snapshotted rows
+            const hasDuplicateId = checkpoint.some(
+              (pr) =>
+                pr.intrinsicId !== product.intrinsicId && pr.id === product.id
+            );
+            const hasDuplicateName = checkpoint.some(
+              (pr) =>
+                pr.intrinsicId !== product.intrinsicId &&
+                pr.name === product.name
+            );
+            if (hasDuplicateId || hasDuplicateName) {
+              console.warn(
+                "the row which previously had already existed was assigned a duplicate id or name"
+              );
+              const text = hasDuplicateId ? "ID" : "name";
+              Store.addNotification({
+                title: "Couldn't save the product",
+                message: `Product with such ${text} already exists`,
+                type: "danger",
+                insert: "top",
+                container: "top-right",
+                animationIn: ["animate__animated", "animate__fadeIn"],
+                animationOut: ["animate__animated", "animate__fadeOut"],
+                dismiss: {
+                  duration: 4000,
+                  onScreen: true,
+                },
+              });
+              return;
+            }
+            changeIsEdited(product, false);
+            console.log("has existed previously");
+
+            try {
+              const res = await fetch("http://localhost:3001/updateProducts", {
+                method: "PUT",
+                body: JSON.stringify(product),
+                headers: {
+                  "Content-Type": "application/json;charset=utf-8",
+                },
+              });
+              if (res.ok) {
+                console.log("success!");
+              } else {
+                console.error("server error!");
+              }
+            } catch (error) {
+              console.error("client error!");
+            }
+            // if the row hasn't existed previously
+          } else if (!ids.has(product.id) && !names.has(product.name)) {
+            changeIsEdited(product, false);
+            console.log("has not existed previously");
+            console.log(product);
+            try {
+              const res = await fetch("http://localhost:3001/addProducts", {
+                method: "POST",
+                body: JSON.stringify(product),
+                headers: {
+                  "Content-Type": "application/json;charset=utf-8",
+                },
+              });
+              if (res.ok) {
+                console.log("success!");
+              } else {
+                console.error("server error!");
+              }
+            } catch (error) {
+              console.error("client error!");
+            }
+          } else {
+            console.warn(
+              "trying to add row with id or name that already exist"
+            );
+            const text = ids.has(product.id) ? "ID" : "name";
+            Store.addNotification({
+              title: "Couldn't save the product",
+              message: `Product with such ${text} already exists`,
+              type: "danger",
+              insert: "top",
+              container: "top-right",
+              animationIn: ["animate__animated", "animate__fadeIn"],
+              animationOut: ["animate__animated", "animate__fadeOut"],
+              dismiss: {
+                duration: 4000,
+                onScreen: true,
+              },
+            });
+          }
+        } else {
+          console.warn("some fields left empty");
+          Store.addNotification({
+            title: "Couldn't save the product",
+            message: "Please, fill all fields to save the product",
+            type: "danger",
+            insert: "top",
+            container: "top-right",
+            animationIn: ["animate__animated", "animate__fadeIn"],
+            animationOut: ["animate__animated", "animate__fadeOut"],
+            dismiss: {
+              duration: 4000,
+              onScreen: true,
+            },
+          });
+        }
+      }
+
+      async function onCancel(product: IProductExtended) {
+        console.log("oncancel fired");
+        const checkpointedProduct = checkpoint.find(
+          (pr) => pr.intrinsicId === product.intrinsicId
+        );
+        if (!checkpointedProduct) {
+          deleteAndCreateNew(product);
+        } else {
+          updateAndCreateNew(checkpointedProduct);
+        }
+      }
+
+      function onView(product: IProductExtended) {
+        console.log("onview fired");
+        changeIsEdited(product, false);
+      }
+
+      function onEdit(product: IProductExtended) {
+        console.log("onedit fired");
+        changeIsEdited(product, true);
+      }
+      async function onDelete(product: IProductExtended) {
+        console.log("ondelete fired");
+        deleteAndCreateNew(product);
+
+        try {
+          const res = await fetch("http://localhost:3001/deleteProducts", {
+            method: "PUT",
+            body: JSON.stringify(product),
+            headers: {
+              "Content-Type": "application/json;charset=utf-8",
+            },
+          });
+
+          if (res.ok) {
+            console.log("success!");
+          } else {
+            console.error("server error!");
+          }
+        } catch (error) {
+          console.error("client error!");
+        }
+      }
+
       const cellValue = product[columnKey as keyof IProductExtended];
       switch (columnKey) {
         case "marketplaces":
@@ -230,7 +350,7 @@ const TableComponent = () => {
                 <div className="py-2 flex items-center gap-2">
                   <section className="bg-red-400 rounded-xl flex-auto flex items-stretch content-stretch p-3 gap-3">
                     <Chip
-                      key={`${product.id}, ${marketplace.name}`}
+                      key={`${product.intrinsicId}, ${marketplace.name}`}
                       className="font-light"
                       color="danger"
                     >
@@ -246,7 +366,7 @@ const TableComponent = () => {
                       (property: Property) => {
                         return (
                           <Chip
-                            key={`${product.id}, ${marketplace.name}, ${property}`}
+                            key={`${product.intrinsicId}, ${marketplace.name}, ${property}`}
                             className="font-light"
                             color="warning"
                             // onClose={isEdited ? }
@@ -291,12 +411,7 @@ const TableComponent = () => {
                       </Button>
                     </div>
                   ) : (
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      data-key={product.id}
-                    >
+                    <Button isIconOnly size="sm" variant="light">
                       <MoreVertIcon className="text-default-400" />
                     </Button>
                   )}
@@ -334,14 +449,14 @@ const TableComponent = () => {
                     : // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       (product.name as any)
                 }
-                onValueChange={(val) => {
+                onChange={(evt) => {
+                  console.log(evt.target.value);
                   if ((columnKey as keyof IProductExtended) === "id") {
-                    // setProducts(changeId(products, product.intrinsicId, val));
-                    onIdChange(product, val);
+                    onIdChange(product, evt.target.value);
                   } else {
-                    // setProducts(changeName(products, product.intrinsicId, val));
-                    onNameChange(product, val);
+                    onNameChange(product, evt.target.value);
                   }
+                  evt.target.focus();
                 }}
               />
             );
@@ -352,7 +467,14 @@ const TableComponent = () => {
           }
       }
     },
-    [products]
+    [
+      changeId,
+      changeIsEdited,
+      changeName,
+      checkpoint,
+      deleteAndCreateNew,
+      updateAndCreateNew,
+    ]
   );
 
   const onNextPage = React.useCallback(() => {
@@ -433,9 +555,10 @@ const TableComponent = () => {
   }, [
     filterValue,
     onSearchChange,
-    onRowsPerPageChange,
     products.length,
-    hasSearchFilter,
+    onRowsPerPageChange,
+    onClear,
+    addProduct,
   ]);
 
   const bottomContent = React.useMemo(() => {
@@ -470,7 +593,7 @@ const TableComponent = () => {
         </div>
       </div>
     );
-  }, [items.length, page, pages, hasSearchFilter]);
+  }, [page, pages, onPreviousPage, onNextPage]);
 
   useEffect(() => {
     async function fetcher() {
@@ -489,7 +612,6 @@ const TableComponent = () => {
 
   return (
     <Table
-      // isStriped
       radius="md"
       className="p-20"
       aria-label="Table of products"
@@ -515,14 +637,14 @@ const TableComponent = () => {
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody
-        emptyContent={"No results"}
-        items={sortedItems as unknown as IProductExtended[]}
-      >
+      <TableBody emptyContent={"No results"} items={items}>
         {(product: IProductExtended) => (
-          <TableRow key={product.id} className="border-2 border-slate-300">
+          <TableRow
+            key={product.intrinsicId}
+            className="border-b-1 border-slate-300"
+          >
             {(columnKey) => (
-              <TableCell key={`${product.id}, ${columnKey}`}>
+              <TableCell key={`${product.intrinsicId}, ${columnKey}`}>
                 {renderCell(product, columnKey)}
               </TableCell>
             )}
