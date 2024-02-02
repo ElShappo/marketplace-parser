@@ -202,6 +202,15 @@ const TableComponent = () => {
               });
               return;
             }
+            setCheckpoint((checkpoint) => {
+              const newCheckpoint = [...checkpoint];
+              const index = newCheckpoint.findIndex(
+                (pr) => pr.intrinsicId === product.intrinsicId
+              );
+              newCheckpoint[index] = product;
+              newCheckpoint[index].isEdited = false;
+              return newCheckpoint;
+            });
             changeIsEdited(product, false);
             console.log("has existed previously");
 
@@ -223,6 +232,10 @@ const TableComponent = () => {
             }
             // if the row hasn't existed previously
           } else if (!ids.has(product.id) && !names.has(product.name)) {
+            setCheckpoint((checkpoint) => [
+              ...checkpoint,
+              { ...product, isEdited: false },
+            ]);
             changeIsEdited(product, false);
             console.log("has not existed previously");
             console.log(product);
@@ -468,7 +481,7 @@ const TableComponent = () => {
     setPage(1);
   }, []);
 
-  async function handleImport(evt: InputEvent) {
+  const handleImport = React.useCallback(async function (evt: InputEvent) {
     const inputElement = evt.target as HTMLInputElement;
     const files = inputElement.files;
 
@@ -482,22 +495,53 @@ const TableComponent = () => {
       const worksheet = workbook.getWorksheet("Лист1");
       console.log(worksheet);
 
-      const rows: IExcelRow[] = [];
+      const rows: IProductExtended[] = [];
 
       worksheet?.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
-          const curr = { id: "", name: "" };
+          const curr = new ProductExtended({}).get();
           row.eachCell((cell, cellNumber) => {
             cellNumber === 1
-              ? (curr.id = String(cell.value))
-              : (curr.name = String(cell.value));
+              ? (curr.id = cell.value!.toString())
+              : (curr.name = cell.value!.toString());
           });
           rows.push(curr);
         }
       });
       console.log(rows);
+
+      try {
+        const promiseDelete = await fetch("http://localhost:3001/deleteAll", {
+          method: "PUT",
+        });
+
+        if (promiseDelete.ok) {
+          console.log("products deletion successful");
+        } else {
+          throw new Error("couldn't delete products");
+        }
+
+        const promiseAdd = await fetch("http://localhost:3001/addProducts", {
+          method: "POST",
+          body: JSON.stringify(rows),
+          headers: {
+            "Content-Type": "application/json;charset=utf-8",
+          },
+        });
+
+        if (promiseAdd.ok) {
+          console.log("products were successfully added");
+        } else {
+          throw new Error("couldn't add products");
+        }
+
+        setProducts(() => rows);
+        setCheckpoint(() => rows);
+      } catch (error) {
+        console.error(error);
+      }
     }
-  }
+  }, []);
 
   const topContent = React.useMemo(() => {
     return (

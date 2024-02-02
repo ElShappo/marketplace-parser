@@ -22,10 +22,25 @@ app.get('/getProducts', (req: Request, res: Response) => {
   res.send(rows);
 });
 
+app.put('/deleteAll', (req: Request, res: Response) => {
+  try {
+    const delete_ = db.prepare('DELETE FROM Products');
+    delete_.run();
+    res.sendStatus(200);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
+
 app.put('/deleteProducts', (req: Request, res: Response) => {
   try {
     const delete_ = db.prepare('DELETE FROM Products WHERE intrinsicId = ?');
-    const products = [req.body] as IProductExtended[];
+    let products = req.body as IProductExtended[] | IProductExtended;
+
+    if (!Array.isArray(products)) {
+      products = [products];
+    }
     
     const delete_Many = db.transaction((products: IProductExtended[]) => {
       for (const product of products) delete_.run(product.intrinsicId);
@@ -42,7 +57,12 @@ app.put('/deleteProducts', (req: Request, res: Response) => {
 app.put('/updateProducts', (req: Request, res: Response) => {
   try {
     const update = db.prepare('UPDATE Products SET id = ?, name = ?, marketplaces = ? WHERE intrinsicId = ?');
-    const products = [req.body] as IProductExtended[];
+    let products = req.body as IProductExtended[] | IProductExtended;
+
+    if (!Array.isArray(products)) {
+      products = [products];
+    }
+
     console.log(products);
     
     const updateMany = db.transaction((products: IProductExtended[]) => {
@@ -60,16 +80,23 @@ app.put('/updateProducts', (req: Request, res: Response) => {
 app.post('/addProducts', (req: Request, res: Response) => {
   try {
     const insert = db.prepare('INSERT INTO Products (intrinsicId, id, name, marketplaces) VALUES (@intrinsicId, @id, @name, @marketplaces)');
-    const products = [req.body] as IProductExtended[];
+    let products = req.body as IProductExtended[] | IProductExtended;
+
+    if (!Array.isArray(products)) {
+      products = [products];
+    }
+
     console.log(products);
     
     const insertMany = db.transaction((products: IProductExtended[]) => {
-      for (const product of products) insert.run({
-        intrinsicId: product.intrinsicId,
-        id: String(product.id),
-        name: product.name,
-        marketplaces: JSON.stringify(product.marketplaces),
-      });
+        for (const product of products) {
+          insert.run({
+          intrinsicId: String(product.intrinsicId),
+          id: product.id,
+          name: product.name,
+          marketplaces: JSON.stringify(product.marketplaces),
+        })
+      };
     });
     
     insertMany(products);
