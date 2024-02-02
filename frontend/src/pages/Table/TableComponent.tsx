@@ -20,7 +20,10 @@ import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import UploadIcon from "@mui/icons-material/Upload";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import DeleteIcon from "@mui/icons-material/Delete";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
+import EditIcon from "@mui/icons-material/Edit";
 import { columns } from "../../data";
 import { IExcelRow, IMarketplace, IProductExtended } from "../../types";
 import { ProductExtended, addIsEditedProperty } from "../../utils";
@@ -386,10 +389,18 @@ const TableComponent = () => {
                   )}
                 </DropdownTrigger>
                 <DropdownMenu>
-                  <DropdownItem onClick={() => onView(product)} key="view">
+                  <DropdownItem
+                    onClick={() => onView(product)}
+                    key="view"
+                    startContent={<VisibilityIcon />}
+                  >
                     View
                   </DropdownItem>
-                  <DropdownItem onClick={() => onEdit(product)} key="edit">
+                  <DropdownItem
+                    onClick={() => onEdit(product)}
+                    key="edit"
+                    startContent={<EditIcon />}
+                  >
                     Edit
                   </DropdownItem>
                   <DropdownItem
@@ -397,6 +408,7 @@ const TableComponent = () => {
                     color="danger"
                     onClick={() => onDelete(product)}
                     key="delete"
+                    startContent={<DeleteIcon />}
                   >
                     Delete
                   </DropdownItem>
