@@ -29,6 +29,7 @@ import { IProductInMarketplace, IProductRecord } from "../../types";
 import { OzonParser, ProductRecord, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
 import Excel from "exceljs";
+import Loader from "../../components/Loader";
 
 const TableComponent = () => {
   const [filterValue, setFilterValue] = React.useState("");
@@ -41,6 +42,7 @@ const TableComponent = () => {
   const [checkpoint, setCheckpoint] = useState<IProductRecord[]>([]); // resembles db rows state on the backend
   const [page, setPage] = React.useState(1);
   const hasSearchFilter = Boolean(filterValue);
+  const [hasFinishedParsing, setHasFinishedParsing] = useState(true);
 
   const filteredItems = React.useMemo(() => {
     let filteredProducts = [...products];
@@ -634,6 +636,8 @@ const TableComponent = () => {
     const ozonParser = new OzonParser();
     const resArray = [];
 
+    setHasFinishedParsing(false);
+
     for (const productName of productNames) {
       console.log(productName);
       const delay = new Promise((resolve) => {
@@ -644,6 +648,7 @@ const TableComponent = () => {
       console.log(res);
       resArray.push(res);
     }
+    setHasFinishedParsing(true);
   }, [checkpoint]);
 
   const bottomContent = React.useMemo(() => {
@@ -691,7 +696,7 @@ const TableComponent = () => {
         </div>
       </div>
     );
-  }, [page, pages, onPreviousPage, onNextPage]);
+  }, [page, pages, onPreviousPage, onNextPage, handleParse]);
 
   useEffect(() => {
     async function fetcher() {
@@ -709,47 +714,53 @@ const TableComponent = () => {
   }, []);
 
   return (
-    <Table
-      radius="md"
-      className="p-20"
-      aria-label="Table of products"
-      isHeaderSticky
-      bottomContent={bottomContent}
-      bottomContentPlacement="outside"
-      classNames={{
-        wrapper: "max-h-[382px]",
-      }}
-      sortDescriptor={sortDescriptor}
-      topContent={topContent}
-      topContentPlacement="outside"
-      onSortChange={setSortDescriptor}
-    >
-      <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn
-            key={column.uid}
-            align={column.uid === "actions" ? "center" : "start"}
-            allowsSorting={column.sortable}
-          >
-            {column.name}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody emptyContent={"No results"} items={items}>
-        {(product: IProductRecord) => (
-          <TableRow
-            key={product.recordId}
-            className="border-b-1 border-slate-300"
-          >
-            {(columnKey) => (
-              <TableCell key={`${product.recordId}, ${columnKey}`}>
-                {renderCell(product, columnKey)}
-              </TableCell>
+    <div className="h-full">
+      {hasFinishedParsing ? (
+        <Table
+          radius="md"
+          className="p-20"
+          aria-label="Table of products"
+          isHeaderSticky
+          bottomContent={bottomContent}
+          bottomContentPlacement="outside"
+          classNames={{
+            wrapper: "max-h-[382px]",
+          }}
+          sortDescriptor={sortDescriptor}
+          topContent={topContent}
+          topContentPlacement="outside"
+          onSortChange={setSortDescriptor}
+        >
+          <TableHeader columns={columns}>
+            {(column) => (
+              <TableColumn
+                key={column.uid}
+                align={column.uid === "actions" ? "center" : "start"}
+                allowsSorting={column.sortable}
+              >
+                {column.name}
+              </TableColumn>
             )}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+          </TableHeader>
+          <TableBody emptyContent={"No results"} items={items}>
+            {(product: IProductRecord) => (
+              <TableRow
+                key={product.recordId}
+                className="border-b-1 border-slate-300"
+              >
+                {(columnKey) => (
+                  <TableCell key={`${product.recordId}, ${columnKey}`}>
+                    {renderCell(product, columnKey)}
+                  </TableCell>
+                )}
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      ) : (
+        <Loader label={"Parsing marketplaces..."} />
+      )}
+    </div>
   );
 };
 
