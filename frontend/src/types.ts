@@ -1,33 +1,23 @@
-import {SVGProps} from "react";
 import { availableMarketplaces } from "./constants";
 
-export type IconSvgProps = SVGProps<SVGSVGElement> & {
-  size?: number;
-};
+export type MarketplaceName = (typeof availableMarketplaces)[number];
 
-export interface IMarketplace {
-  name: typeof availableMarketplaces[number]
-  link: string | undefined
+export interface IProductInMarketplace {
+  marketplaceName: MarketplaceName;
+  result: {
+    productName: string;
+    productLink: string;
+    productPriceHistory: string[];
+  };
 }
 
 export interface IProduct {
-  id: string
-  name: string
-  marketplaces: IMarketplace[]
+  productId: string;
+  searchedName: string;
+  marketplaces: IProductInMarketplace[];
 }
 
-export interface IProductExtended extends IProduct {
-  intrinsicId: string
-  isEdited: boolean
-}
-
-export type ProductRef = {
-  intrinsicId: string
-  id: string
-  name: string
-}
-
-export interface IExcelRow {
-  id: string
-  name: string
+export interface IProductRecord extends IProduct {
+  recordId: string;
+  isEdited: boolean;
 }

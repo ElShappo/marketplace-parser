@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import db from "./db";
-import { IProductExtended } from "./types";
+import { IProductRecord } from "./types";
 import cors from "cors";
 
 dotenv.config();
@@ -17,7 +17,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.get("/getProducts", (req: Request, res: Response) => {
-  const rows = db.prepare("SELECT * FROM Products").all() as IProductExtended[];
+  const rows = db.prepare("SELECT * FROM Products").all() as IProductRecord[];
   console.log(rows);
   res.send(rows);
 });
@@ -35,15 +35,15 @@ app.put("/deleteAll", (req: Request, res: Response) => {
 
 app.put("/deleteProducts", (req: Request, res: Response) => {
   try {
-    const delete_ = db.prepare("DELETE FROM Products WHERE intrinsicId = ?");
-    let products = req.body as IProductExtended[] | IProductExtended;
+    const delete_ = db.prepare("DELETE FROM Products WHERE recordId = ?");
+    let products = req.body as IProductRecord[] | IProductRecord;
 
     if (!Array.isArray(products)) {
       products = [products];
     }
 
-    const delete_Many = db.transaction((products: IProductExtended[]) => {
-      for (const product of products) delete_.run(product.intrinsicId);
+    const delete_Many = db.transaction((products: IProductRecord[]) => {
+      for (const product of products) delete_.run(product.recordId);
     });
 
     delete_Many(products);
@@ -57,9 +57,9 @@ app.put("/deleteProducts", (req: Request, res: Response) => {
 app.put("/updateProducts", (req: Request, res: Response) => {
   try {
     const update = db.prepare(
-      "UPDATE Products SET id = ?, name = ?, marketplaces = ? WHERE intrinsicId = ?"
+      "UPDATE Products SET productId = ?, searchedName = ?, marketplaces = ? WHERE recordId = ?"
     );
-    let products = req.body as IProductExtended[] | IProductExtended;
+    let products = req.body as IProductRecord[] | IProductRecord;
 
     if (!Array.isArray(products)) {
       products = [products];
@@ -67,13 +67,13 @@ app.put("/updateProducts", (req: Request, res: Response) => {
 
     console.log(products);
 
-    const updateMany = db.transaction((products: IProductExtended[]) => {
+    const updateMany = db.transaction((products: IProductRecord[]) => {
       for (const product of products)
         update.run(
-          product.id,
-          product.name,
+          product.productId,
+          product.searchedName,
           JSON.stringify(product.marketplaces),
-          product.intrinsicId
+          product.recordId
         );
     });
 
@@ -88,9 +88,9 @@ app.put("/updateProducts", (req: Request, res: Response) => {
 app.post("/addProducts", (req: Request, res: Response) => {
   try {
     const insert = db.prepare(
-      "INSERT INTO Products (intrinsicId, id, name, marketplaces) VALUES (@intrinsicId, @id, @name, @marketplaces)"
+      "INSERT INTO Products (recordId, productId, searchedName, marketplaces) VALUES (@recordId, @productId, @searchedName, @marketplaces)"
     );
-    let products = req.body as IProductExtended[] | IProductExtended;
+    let products = req.body as IProductRecord[] | IProductRecord;
 
     if (!Array.isArray(products)) {
       products = [products];
@@ -98,12 +98,12 @@ app.post("/addProducts", (req: Request, res: Response) => {
 
     console.log(products);
 
-    const insertMany = db.transaction((products: IProductExtended[]) => {
+    const insertMany = db.transaction((products: IProductRecord[]) => {
       for (const product of products) {
         insert.run({
-          intrinsicId: String(product.intrinsicId),
-          id: product.id,
-          name: product.name,
+          recordId: String(product.recordId),
+          productId: product.productId,
+          searchedName: product.searchedName,
           marketplaces: JSON.stringify(product.marketplaces),
         });
       }

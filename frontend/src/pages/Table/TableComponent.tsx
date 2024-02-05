@@ -25,8 +25,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import EditIcon from "@mui/icons-material/Edit";
 import { columns } from "../../data";
-import { IMarketplace, IProductExtended } from "../../types";
-import { OzonParser, ProductExtended, addIsEditedProperty } from "../../utils";
+import { IProductInMarketplace, IProductRecord } from "../../types";
+import { OzonParser, ProductRecord, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
 import Excel from "exceljs";
 
@@ -37,20 +37,20 @@ const TableComponent = () => {
     column: "id",
     direction: "ascending",
   });
-  const [products, setProducts] = useState<IProductExtended[]>([]); // resembles current rows state on the frontend
-  const [checkpoint, setCheckpoint] = useState<IProductExtended[]>([]); // resembles db rows state on the backend
+  const [products, setProducts] = useState<IProductRecord[]>([]); // resembles current rows state on the frontend
+  const [checkpoint, setCheckpoint] = useState<IProductRecord[]>([]); // resembles db rows state on the backend
   const [page, setPage] = React.useState(1);
   const hasSearchFilter = Boolean(filterValue);
 
   const filteredItems = React.useMemo(() => {
-    let filteredUsers = [...products];
+    let filteredProducts = [...products];
 
     if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter((user) =>
-        user.name.toLowerCase().includes(filterValue.toLowerCase())
+      filteredProducts = filteredProducts.filter((pr) =>
+        pr.searchedName.toLowerCase().includes(filterValue.toLowerCase())
       );
     }
-    return filteredUsers;
+    return filteredProducts;
   }, [products, hasSearchFilter, filterValue]);
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
@@ -63,11 +63,11 @@ const TableComponent = () => {
   }, [page, filteredItems, rowsPerPage]);
 
   // const sortedItems = React.useMemo(() => {
-  //   return [...items].sort((a: IProductExtended, b: IProductExtended) => {
-  //     const first = a[sortDescriptor.column as keyof IProductExtended] as
+  //   return [...items].sort((a: IProductRecord, b: IProductRecord) => {
+  //     const first = a[sortDescriptor.column as keyof IProductRecord] as
   //       | number
   //       | string;
-  //     const second = b[sortDescriptor.column as keyof IProductExtended] as
+  //     const second = b[sortDescriptor.column as keyof IProductRecord] as
   //       | number
   //       | string;
   //     const cmp = first < second ? -1 : first > second ? 1 : 0;
@@ -76,20 +76,17 @@ const TableComponent = () => {
   //   });
   // }, [sortDescriptor, items]);
 
-  const deleteAndCreateNew = useCallback(
-    (productToDelete: IProductExtended) => {
-      console.log("ondelete and create new fired");
-      console.log(productToDelete);
-      setProducts((products) =>
-        products.filter(
-          (product) => product.intrinsicId !== productToDelete.intrinsicId
-        )
-      );
-    },
-    []
-  );
+  const deleteAndCreateNew = useCallback((productToDelete: IProductRecord) => {
+    console.log("ondelete and create new fired");
+    console.log(productToDelete);
+    setProducts((products) =>
+      products.filter(
+        (product) => product.recordId !== productToDelete.recordId
+      )
+    );
+  }, []);
 
-  const addAndCreateNew = useCallback((newProduct: IProductExtended) => {
+  const addAndCreateNew = useCallback((newProduct: IProductRecord) => {
     console.log("onadd and create new fired");
     setProducts((products) => {
       const arrShallowCopy = [...products];
@@ -100,27 +97,24 @@ const TableComponent = () => {
     });
   }, []);
 
-  const updateAndCreateNew = useCallback(
-    (replacingProduct: IProductExtended) => {
-      console.log("onupdate and create new fired");
-      setProducts((products) => {
-        const arrShallowCopy = [...products];
-        const productClone = structuredClone(replacingProduct);
+  const updateAndCreateNew = useCallback((replacingProduct: IProductRecord) => {
+    console.log("onupdate and create new fired");
+    setProducts((products) => {
+      const arrShallowCopy = [...products];
+      const productClone = structuredClone(replacingProduct);
 
-        const index = products.findIndex(
-          (product) =>
-            String(product.intrinsicId) === String(replacingProduct.intrinsicId)
-        );
-        arrShallowCopy[index] = productClone;
+      const index = products.findIndex(
+        (product) =>
+          String(product.recordId) === String(replacingProduct.recordId)
+      );
+      arrShallowCopy[index] = productClone;
 
-        return arrShallowCopy;
-      });
-    },
-    []
-  );
+      return arrShallowCopy;
+    });
+  }, []);
 
   const changeIsEdited = useCallback(
-    (product: IProductExtended, newIsEditedVal: boolean) => {
+    (product: IProductRecord, newIsEditedVal: boolean) => {
       const replacingProduct = structuredClone(product);
       replacingProduct.isEdited = newIsEditedVal;
       updateAndCreateNew(replacingProduct);
@@ -129,18 +123,18 @@ const TableComponent = () => {
   );
 
   const changeId = useCallback(
-    (product: IProductExtended, newId: string) => {
+    (product: IProductRecord, newId: string) => {
       const replacingProduct = structuredClone(product);
-      replacingProduct.id = newId;
+      replacingProduct.productId = newId;
       updateAndCreateNew(replacingProduct);
     },
     [updateAndCreateNew]
   );
 
   const changeName = useCallback(
-    (product: IProductExtended, newName: string) => {
+    (product: IProductRecord, newName: string) => {
       const replacingProduct = structuredClone(product);
-      replacingProduct.name = newName;
+      replacingProduct.searchedName = newName;
       updateAndCreateNew(replacingProduct);
     },
     [updateAndCreateNew]
@@ -148,42 +142,45 @@ const TableComponent = () => {
 
   const addProduct = useCallback(() => {
     console.log("onaddproduct fired");
-    const newProduct = new ProductExtended({ isEdited: true }).get();
+    const newProduct = new ProductRecord({ isEdited: true }).get();
     addAndCreateNew(newProduct);
   }, [addAndCreateNew]);
 
   console.log(products);
 
   const renderCell = React.useCallback(
-    (product: IProductExtended, columnKey: React.Key) => {
-      function onIdChange(product: IProductExtended, newId: string) {
+    (product: IProductRecord, columnKey: React.Key) => {
+      function onIdChange(product: IProductRecord, newId: string) {
         changeId(product, newId);
       }
 
-      function onNameChange(product: IProductExtended, newName: string) {
+      function onNameChange(product: IProductRecord, newName: string) {
         changeName(product, newName);
       }
 
-      async function onSave(product: IProductExtended) {
-        const ids = new Set(checkpoint.map((product) => product.id));
+      async function onSave(product: IProductRecord) {
+        const ids = new Set(checkpoint.map((product) => product.productId));
         const intrinsicIds = new Set(
-          checkpoint.map((product) => product.intrinsicId)
+          checkpoint.map((product) => product.recordId)
         );
-        const names = new Set(checkpoint.map((product) => product.name));
+        const names = new Set(
+          checkpoint.map((product) => product.searchedName)
+        );
 
         // id and name shouldn't be empty
-        if (product.id && product.name) {
+        if (product.productId && product.searchedName) {
           // if we modify already existing snapshot of the row
-          if (intrinsicIds.has(product.intrinsicId)) {
+          if (intrinsicIds.has(product.recordId)) {
             // check that the new id and the new name are unique among other snapshotted rows
             const hasDuplicateId = checkpoint.some(
               (pr) =>
-                pr.intrinsicId !== product.intrinsicId && pr.id === product.id
+                pr.recordId !== product.recordId &&
+                pr.productId === product.productId
             );
             const hasDuplicateName = checkpoint.some(
               (pr) =>
-                pr.intrinsicId !== product.intrinsicId &&
-                pr.name === product.name
+                pr.recordId !== product.recordId &&
+                pr.searchedName === product.searchedName
             );
             if (hasDuplicateId || hasDuplicateName) {
               console.warn(
@@ -208,7 +205,7 @@ const TableComponent = () => {
             setCheckpoint((checkpoint) => {
               const newCheckpoint = [...checkpoint];
               const index = newCheckpoint.findIndex(
-                (pr) => pr.intrinsicId === product.intrinsicId
+                (pr) => pr.recordId === product.recordId
               );
               newCheckpoint[index] = product;
               newCheckpoint[index].isEdited = false;
@@ -234,7 +231,10 @@ const TableComponent = () => {
               console.error("client error!");
             }
             // if the row hasn't existed previously
-          } else if (!ids.has(product.id) && !names.has(product.name)) {
+          } else if (
+            !ids.has(product.productId) &&
+            !names.has(product.searchedName)
+          ) {
             setCheckpoint((checkpoint) => [
               ...checkpoint,
               { ...product, isEdited: false },
@@ -262,7 +262,7 @@ const TableComponent = () => {
             console.warn(
               "trying to add row with id or name that already exist"
             );
-            const text = ids.has(product.id) ? "ID" : "name";
+            const text = ids.has(product.productId) ? "ID" : "name";
             Store.addNotification({
               title: "Couldn't save the product",
               message: `Product with such ${text} already exists`,
@@ -295,10 +295,10 @@ const TableComponent = () => {
         }
       }
 
-      async function onCancel(product: IProductExtended) {
+      async function onCancel(product: IProductRecord) {
         console.log("oncancel fired");
         const checkpointedProduct = checkpoint.find(
-          (pr) => pr.intrinsicId === product.intrinsicId
+          (pr) => pr.recordId === product.recordId
         );
         console.log(checkpointedProduct);
         if (!checkpointedProduct) {
@@ -309,16 +309,16 @@ const TableComponent = () => {
         }
       }
 
-      function onView(product: IProductExtended) {
+      function onView(product: IProductRecord) {
         console.log("onview fired");
         changeIsEdited(product, false);
       }
 
-      function onEdit(product: IProductExtended) {
+      function onEdit(product: IProductRecord) {
         console.log("onedit fired");
         changeIsEdited(product, true);
       }
-      async function onDelete(product: IProductExtended) {
+      async function onDelete(product: IProductRecord) {
         console.log("ondelete fired");
         deleteAndCreateNew(product);
 
@@ -341,23 +341,27 @@ const TableComponent = () => {
         }
       }
 
-      const cellValue = product[columnKey as keyof IProductExtended];
+      const cellValue = product[columnKey as keyof IProductRecord];
       switch (columnKey) {
         case "marketplaces":
           return (
             <div className="flex gap-4">
-              {(cellValue as IMarketplace[]).every(
-                (marketplace) => !marketplace.link
+              {(cellValue as IProductInMarketplace[]).every(
+                (marketplace) => !marketplace.result.productLink
               ) ? (
                 <p className="italic text-slate-400">No info</p>
               ) : (
-                (cellValue as IMarketplace[]).map((marketplace) => {
+                (cellValue as IProductInMarketplace[]).map((marketplace) => {
                   return (
                     <Link
-                      href={marketplace.link ? marketplace.link : "#"}
+                      href={
+                        marketplace.result.productLink
+                          ? marketplace.result.productLink
+                          : "#"
+                      }
                       underline="always"
                     >
-                      {marketplace.name}
+                      {marketplace.marketplaceName}
                     </Link>
                   );
                 })
@@ -425,15 +429,15 @@ const TableComponent = () => {
                 variant="flat"
                 label={String(columnKey)}
                 value={
-                  columnKey === "id"
+                  columnKey === "productId"
                     ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      (product.id as any)
+                      (product.productId as any)
                     : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      (product.name as any)
+                      (product.searchedName as any)
                 }
                 onChange={(evt) => {
                   console.log(evt.target.value);
-                  if ((columnKey as keyof IProductExtended) === "id") {
+                  if ((columnKey as keyof IProductRecord) === "productId") {
                     onIdChange(product, evt.target.value);
                   } else {
                     onNameChange(product, evt.target.value);
@@ -507,15 +511,15 @@ const TableComponent = () => {
       const worksheet = workbook.getWorksheet("Лист1");
       console.log(worksheet);
 
-      const rows: IProductExtended[] = [];
+      const rows: IProductRecord[] = [];
 
       worksheet?.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
-          const curr = new ProductExtended({}).get();
+          const curr = new ProductRecord({}).get();
           row.eachCell((cell, cellNumber) => {
             cellNumber === 1
-              ? (curr.id = cell.value!.toString())
-              : (curr.name = cell.value!.toString());
+              ? (curr.productId = cell.value!.toString())
+              : (curr.searchedName = cell.value!.toString());
           });
           rows.push(curr);
         }
@@ -626,48 +630,20 @@ const TableComponent = () => {
   ]);
 
   const handleParse = React.useCallback(async () => {
-    const productNames = checkpoint.map((pr) => pr.name);
+    const productNames = checkpoint.map((pr) => pr.searchedName);
     const ozonParser = new OzonParser();
-    const res = await ozonParser.parseProduct(productNames[0]);
-    console.log(res);
-    // const parser = new DOMParser();
+    const resArray = [];
 
-    // const url = new URL("https://www.ozon.ru/search/");
-    // url.searchParams.set("from_global", "true");
-    // url.searchParams.set("sorting", "price");
-
-    // try {
-    //   for (const productName of productNames) {
-    //     url.searchParams.set("text", productName);
-
-    //     const res = await fetch(url.href);
-    //     const text = await res.text();
-
-    //     const htmlDocument = parser.parseFromString(text, "text/html");
-    //     const resultContainer = htmlDocument.querySelector(
-    //       ".widget-search-result-container"
-    //     );
-    //     console.log(resultContainer);
-    //     if (resultContainer) {
-    //       const aElement = resultContainer.querySelector("div > div > div > a");
-    //       console.log(aElement);
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error(error);
-    // }
-    // const promise = await fetch("http://localhost:3001/ozon", {
-    //   method: "POST",
-    //   body: JSON.stringify(checkpoint.slice(0, 1)),
-    //   headers: {
-    //     "Content-Type": "application/json;charset=utf-8",
-    //   },
-    // });
-    // if (promise.ok) {
-    //   console.log("products parsed successfully");
-    // } else {
-    //   console.error("could not parse products");
-    // }
+    for (const productName of productNames) {
+      console.log(productName);
+      const delay = new Promise((resolve) => {
+        setTimeout(resolve, 500);
+      });
+      await delay;
+      const res = await ozonParser.parseProduct(productName);
+      console.log(res);
+      resArray.push(res);
+    }
   }, [checkpoint]);
 
   const bottomContent = React.useMemo(() => {
@@ -760,13 +736,13 @@ const TableComponent = () => {
         )}
       </TableHeader>
       <TableBody emptyContent={"No results"} items={items}>
-        {(product: IProductExtended) => (
+        {(product: IProductRecord) => (
           <TableRow
-            key={product.intrinsicId}
+            key={product.recordId}
             className="border-b-1 border-slate-300"
           >
             {(columnKey) => (
-              <TableCell key={`${product.intrinsicId}, ${columnKey}`}>
+              <TableCell key={`${product.recordId}, ${columnKey}`}>
                 {renderCell(product, columnKey)}
               </TableCell>
             )}

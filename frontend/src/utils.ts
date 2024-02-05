@@ -1,17 +1,33 @@
 import { availableMarketplaces } from "./constants";
-import { IMarketplace, IProduct, IProductExtended } from "./types";
+import {
+  IProductInMarketplace,
+  IProduct,
+  IProductRecord,
+  MarketplaceName,
+} from "./types";
 import { v4 as uuidv4 } from "uuid";
 
 export class Marketplace {
-  _marketplace: IMarketplace;
+  _marketplace: IProductInMarketplace;
 
-  constructor(
-    name: (typeof availableMarketplaces)[number],
-    link: string | undefined
-  ) {
+  constructor({
+    marketplaceName,
+    productName = "",
+    productLink = "",
+    productPriceHistory = [],
+  }: {
+    marketplaceName: MarketplaceName;
+    productName?: string;
+    productLink?: string;
+    productPriceHistory?: string[];
+  }) {
     this._marketplace = {
-      name,
-      link,
+      marketplaceName,
+      result: {
+        productName,
+        productLink,
+        productPriceHistory,
+      },
     };
   }
   get() {
@@ -19,39 +35,30 @@ export class Marketplace {
   }
 }
 
-export class ProductExtended {
-  _product: IProductExtended;
+export class ProductRecord {
+  _product: IProductRecord;
 
-  // if no marketplaces are passed, then we assume that all marketplaces should be added
   constructor({
-    id = "",
-    name = "",
+    productId = "",
+    searchedName = "",
     isEdited = false,
     marketplaces,
   }: {
-    id?: string;
-    name?: string;
+    productId?: string;
+    searchedName?: string;
     isEdited?: boolean;
     marketplaces?: Marketplace[];
   }) {
     this._product = {
-      intrinsicId: uuidv4(),
-      id,
-      name,
+      recordId: uuidv4(),
+      productId,
+      searchedName,
       isEdited,
       marketplaces: marketplaces
-        ? marketplaces.map((mp) => {
-            return {
-              name: mp.get().name,
-              link: mp.get().link,
-            };
-          })
-        : availableMarketplaces.map((mp) => {
-            return {
-              name: mp,
-              link: "",
-            };
-          }),
+        ? marketplaces.map((mp) => mp.get())
+        : availableMarketplaces.map((mp: MarketplaceName) =>
+            new Marketplace({ marketplaceName: mp }).get()
+          ),
     };
   }
   get() {
@@ -62,7 +69,7 @@ export class ProductExtended {
 export function addIsEditedProperty(
   products: IProduct[],
   isEdited: boolean = false
-): IProductExtended[] {
+): IProductRecord[] {
   const shallowCopy = [...products];
   return shallowCopy.map((product) => {
     return { ...product, isEdited };
@@ -106,6 +113,7 @@ export class OzonParser extends MarketplaceParser {
     const url = new URL("https://www.ozon.ru/search/");
     url.searchParams.set("from_global", "true");
     url.searchParams.set("sorting", "price");
+    url.searchParams.set("deny_category_prediction", "true");
 
     super({
       baseUrl: url.href,
@@ -120,13 +128,13 @@ export class OzonParser extends MarketplaceParser {
     url.searchParams.set("text", productName);
     const parser = new DOMParser();
 
-    console.log(url.href);
-
     let [name, link, price]: [
       name: string | null,
       link: string | null,
       price: string | null
     ] = [null, null, null];
+
+    console.log(url.href);
 
     try {
       const res = await fetch(url.href);

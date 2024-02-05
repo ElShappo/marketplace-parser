@@ -1,1 +1,1 @@
-export {IProduct, IProductExtended} from '../../frontend/src/types'
+export { IProduct, IProductRecord } from "../../frontend/src/types";
