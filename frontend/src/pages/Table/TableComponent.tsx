@@ -25,8 +25,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import EditIcon from "@mui/icons-material/Edit";
 import { columns } from "../../data";
-import { IExcelRow, IMarketplace, IProductExtended } from "../../types";
-import { ProductExtended, addIsEditedProperty } from "../../utils";
+import { IMarketplace, IProductExtended } from "../../types";
+import { OzonParser, ProductExtended, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
 import Excel from "exceljs";
 
@@ -616,6 +616,7 @@ const TableComponent = () => {
       </div>
     );
   }, [
+    handleImport,
     filterValue,
     onSearchChange,
     products.length,
@@ -623,6 +624,51 @@ const TableComponent = () => {
     onClear,
     addProduct,
   ]);
+
+  const handleParse = React.useCallback(async () => {
+    const productNames = checkpoint.map((pr) => pr.name);
+    const ozonParser = new OzonParser();
+    const res = await ozonParser.parseProduct(productNames[0]);
+    console.log(res);
+    // const parser = new DOMParser();
+
+    // const url = new URL("https://www.ozon.ru/search/");
+    // url.searchParams.set("from_global", "true");
+    // url.searchParams.set("sorting", "price");
+
+    // try {
+    //   for (const productName of productNames) {
+    //     url.searchParams.set("text", productName);
+
+    //     const res = await fetch(url.href);
+    //     const text = await res.text();
+
+    //     const htmlDocument = parser.parseFromString(text, "text/html");
+    //     const resultContainer = htmlDocument.querySelector(
+    //       ".widget-search-result-container"
+    //     );
+    //     console.log(resultContainer);
+    //     if (resultContainer) {
+    //       const aElement = resultContainer.querySelector("div > div > div > a");
+    //       console.log(aElement);
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error(error);
+    // }
+    // const promise = await fetch("http://localhost:3001/ozon", {
+    //   method: "POST",
+    //   body: JSON.stringify(checkpoint.slice(0, 1)),
+    //   headers: {
+    //     "Content-Type": "application/json;charset=utf-8",
+    //   },
+    // });
+    // if (promise.ok) {
+    //   console.log("products parsed successfully");
+    // } else {
+    //   console.error("could not parse products");
+    // }
+  }, [checkpoint]);
 
   const bottomContent = React.useMemo(() => {
     return (
@@ -662,6 +708,7 @@ const TableComponent = () => {
             endContent={<PlayCircleFilledWhiteIcon />}
             size="lg"
             className="font-bold uppercase"
+            onClick={handleParse}
           >
             Parse
           </Button>
