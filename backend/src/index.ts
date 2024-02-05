@@ -3,12 +3,15 @@ import dotenv from "dotenv";
 import db from "./db";
 import { IProductRecord } from "./types";
 import cors from "cors";
+import bodyParser from "body-parser";
 
 dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
 app.use(cors());
+app.use(bodyParser.json({ limit: "500mb" }));
+app.use(bodyParser.urlencoded({ limit: "500mb", extended: true }));
 
 const port = process.env.PORT || 3001;
 
@@ -78,6 +81,7 @@ app.put("/updateProducts", (req: Request, res: Response) => {
     });
 
     updateMany(products);
+    console.log("success!");
     res.sendStatus(200);
   } catch (error) {
     console.error(error);

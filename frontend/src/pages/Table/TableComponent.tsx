@@ -346,14 +346,16 @@ const TableComponent = () => {
       const cellValue = product[columnKey as keyof IProductRecord];
       switch (columnKey) {
         case "marketplaces":
+          // eslint-disable-next-line no-case-declarations
+          const filteredMarketplaces = (
+            cellValue as IProductInMarketplace[]
+          ).filter((marketplace) => marketplace.result.productLink);
           return (
             <div className="flex gap-4">
-              {(cellValue as IProductInMarketplace[]).every(
-                (marketplace) => !marketplace.result.productLink
-              ) ? (
+              {!filteredMarketplaces.length ? (
                 <p className="italic text-slate-400">No info</p>
               ) : (
-                (cellValue as IProductInMarketplace[]).map((marketplace) => {
+                filteredMarketplaces.map((marketplace) => {
                   return (
                     <Link
                       href={
@@ -361,6 +363,7 @@ const TableComponent = () => {
                           ? marketplace.result.productLink
                           : "#"
                       }
+                      target="_blank"
                       underline="always"
                     >
                       {marketplace.marketplaceName}
@@ -641,13 +644,48 @@ const TableComponent = () => {
     for (const productName of productNames) {
       console.log(productName);
       const delay = new Promise((resolve) => {
-        setTimeout(resolve, 500);
+        setTimeout(resolve, 200);
       });
       await delay;
       const res = await ozonParser.parseProduct(productName);
       console.log(res);
       resArray.push(res);
     }
+    console.log(resArray);
+    const newProducts = [...checkpoint];
+    for (let i = 0; i < newProducts.length; ++i) {
+      const marketplaces = newProducts[i].marketplaces;
+
+      const ozon = marketplaces.find((mp) => mp.marketplaceName === "ozon");
+      ozon!.result = {
+        productName: resArray[i].name,
+        productLink: resArray[i].link,
+        productPriceHistory: [
+          ...ozon!.result.productPriceHistory,
+          resArray[i].price,
+        ],
+      };
+    }
+    setProducts(newProducts);
+    setCheckpoint(newProducts);
+
+    try {
+      const response = await fetch("http://localhost:3001/updateProducts", {
+        method: "PUT",
+        body: JSON.stringify(newProducts),
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+      });
+      if (response.ok) {
+        console.log("success!");
+      } else {
+        console.error("server error!");
+      }
+    } catch (error) {
+      console.error("client error!");
+    }
+
     setHasFinishedParsing(true);
   }, [checkpoint]);
 

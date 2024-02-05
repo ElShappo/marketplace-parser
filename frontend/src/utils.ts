@@ -76,6 +76,13 @@ export function addIsEditedProperty(
   });
 }
 
+function fullDomain(partialPath: string) {
+  console.log(partialPath);
+  const improvedPartialPath = partialPath.match(/product\/.+/);
+  const marketplaceDomain = "https://www.ozon.ru/";
+  return marketplaceDomain + improvedPartialPath;
+}
+
 class MarketplaceParser {
   _baseUrl: string; // url of the marketplace
   _resultsContainerSelector: string; // common selector for all the subsequent selectors
@@ -128,11 +135,11 @@ export class OzonParser extends MarketplaceParser {
     url.searchParams.set("text", productName);
     const parser = new DOMParser();
 
-    let [name, link, price]: [
-      name: string | null,
-      link: string | null,
-      price: string | null
-    ] = [null, null, null];
+    let [name, link, price]: [name: string, link: string, price: string] = [
+      "",
+      "",
+      "",
+    ];
 
     console.log(url.href);
 
@@ -153,15 +160,15 @@ export class OzonParser extends MarketplaceParser {
       if (!nameElement) {
         throw new Error("could not find the product name");
       }
-      name = nameElement.textContent;
+      name = nameElement.textContent || "";
 
       const linkElement = resultsContainer.querySelector(
         this._productLinkSelector
-      );
+      ) as HTMLAnchorElement;
       if (!linkElement) {
         throw new Error("could not find the product link");
       }
-      link = "https://www.ozon.ru" + linkElement.textContent;
+      link = linkElement.href ? fullDomain(linkElement.href) : "";
 
       const priceElement = resultsContainer.querySelector(
         this._productPriceSelector
@@ -169,7 +176,7 @@ export class OzonParser extends MarketplaceParser {
       if (!priceElement) {
         throw new Error("could not find the product price");
       }
-      price = priceElement.textContent;
+      price = priceElement.textContent || "";
     } catch (error) {
       console.error(error);
     }
