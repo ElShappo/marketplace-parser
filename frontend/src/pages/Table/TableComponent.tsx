@@ -24,12 +24,19 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import EditIcon from "@mui/icons-material/Edit";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { columns } from "../../data";
-import { IProductInMarketplace, IProductRecord } from "../../types";
+import {
+  IProductInMarketplace,
+  IProductRecord,
+  IProductRecordExcel,
+} from "../../types";
+import { saveAs } from "file-saver";
 import { OzonParser, ProductRecord, addIsEditedProperty } from "../../utils";
 import { Store } from "react-notifications-component";
 import Excel from "exceljs";
 import Loader from "../../components/Loader";
+import { availableMarketplaces } from "../../constants";
 
 const TableComponent = () => {
   const [filterValue, setFilterValue] = React.useState("");
@@ -564,6 +571,127 @@ const TableComponent = () => {
     }
   }, []);
 
+  const handleExport = React.useCallback(async () => {
+    const productsToExport = JSON.parse(
+      localStorage.getItem("latestParseJson")!
+    ) as IProductRecord[];
+
+    // priceHistory -> price
+    const productsToExportWithModifiedKeys = productsToExport.map((pr) => {
+      const newProduct: IProductRecordExcel = {
+        ...pr,
+        marketplaces: pr.marketplaces.map((mp) => {
+          const newMarketplace = {
+            ...mp,
+            result: {
+              productName: mp.result.productName,
+              productLink: mp.result.productLink,
+              productPrice: mp.result.productPriceHistory.at(-1) || "",
+            },
+          };
+          return newMarketplace;
+        }),
+      };
+      return newProduct;
+    });
+
+    console.log(productsToExportWithModifiedKeys);
+
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet("Лист1");
+
+    worksheet.views = [{ state: "frozen", xSplit: 2, ySplit: 2 }];
+    worksheet.properties.defaultColWidth = 30;
+
+    worksheet.mergeCells(1, 1, 2, 1);
+    worksheet.getCell("A1").value = "productID";
+    worksheet.getCell("A1").alignment = {
+      vertical: "middle",
+      horizontal: "center",
+    };
+
+    worksheet.mergeCells(1, 2, 2, 2);
+    worksheet.getCell("B1").value = "productName";
+    worksheet.getCell("B1").alignment = {
+      vertical: "middle",
+      horizontal: "center",
+    };
+
+    const columnIndex = 3;
+    let linkColIndex: number | null = null;
+    const props = Object.keys(
+      productsToExportWithModifiedKeys[0].marketplaces[0].result
+    ); // name, price, link, ...
+    for (let i = 0; i < availableMarketplaces.length; ++i) {
+      worksheet.mergeCells(
+        1,
+        columnIndex + i * props.length,
+        1,
+        columnIndex + i * props.length + props.length - 1
+      );
+      worksheet.getCell(1, columnIndex + i * props.length).value =
+        availableMarketplaces[i];
+      worksheet.getCell(1, columnIndex + i * props.length).alignment = {
+        horizontal: "center",
+      };
+
+      for (let j = 0; j < props.length; ++j) {
+        if (props[j] === "productLink" && !linkColIndex) {
+          linkColIndex = columnIndex + i * props.length + j;
+        }
+        worksheet.getCell(2, columnIndex + i * props.length + j).value =
+          props[j];
+        worksheet.getCell(2, columnIndex + i * props.length + j).alignment = {
+          horizontal: "center",
+        };
+      }
+    }
+    for (const product of productsToExportWithModifiedKeys) {
+      const row = [];
+      row.push(product.productId);
+      row.push(product.searchedName);
+
+      for (const mp of product.marketplaces) {
+        for (const prop of Object.keys(mp.result)) {
+          row.push(
+            mp.result[
+              prop as keyof {
+                productName: string;
+                productLink: string;
+                productPrice: string;
+              }
+            ]
+          );
+        }
+      }
+      worksheet.addRow(row);
+    }
+    console.log(linkColIndex);
+
+    const linkStyle = {
+      underline: true,
+      color: { argb: "FF0000FF" },
+    };
+
+    for (let r = 3; r < productsToExportWithModifiedKeys.length + 3; ++r) {
+      for (let delta = 0; delta < availableMarketplaces.length; ++delta) {
+        const c = linkColIndex! + delta * props.length;
+        console.log(c);
+        const value = String(worksheet.getCell(r, c).value);
+        if (value) {
+          const cell = worksheet.getCell(r, c);
+          cell.value = {
+            text: value,
+            hyperlink: value,
+          };
+          cell.font = linkStyle;
+        }
+      }
+    }
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), "result.xlsx");
+  }, []);
+
   const topContent = React.useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -670,10 +798,12 @@ const TableComponent = () => {
     setProducts(newProducts);
     setCheckpoint(newProducts);
 
+    const newProductsStringified = JSON.stringify(newProducts);
+
     try {
       const response = await fetch("http://localhost:3001/updateProducts", {
         method: "PUT",
-        body: JSON.stringify(newProducts),
+        body: newProductsStringified,
         headers: {
           "Content-Type": "application/json;charset=utf-8",
         },
@@ -688,6 +818,14 @@ const TableComponent = () => {
     }
 
     setHasFinishedParsing(true);
+    const latestParseDate = new Date();
+    const [year, month, day] = [
+      latestParseDate.getFullYear(),
+      latestParseDate.getMonth() + 1,
+      latestParseDate.getDate(),
+    ];
+    localStorage.setItem("latestParseDate", `${month}-${day}-${year}`);
+    localStorage.setItem("latestParseJson", newProductsStringified);
   }, [checkpoint]);
 
   const bottomContent = React.useMemo(() => {
@@ -722,7 +860,7 @@ const TableComponent = () => {
             </Button>
           </div>
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center flex-wrap gap-4">
           <Button
             color="warning"
             endContent={<PlayCircleFilledWhiteIcon />}
@@ -732,10 +870,19 @@ const TableComponent = () => {
           >
             Parse
           </Button>
+          <Button
+            color="warning"
+            endContent={<FileDownloadIcon />}
+            size="lg"
+            className="font-bold uppercase"
+            onClick={handleExport}
+          >
+            Export XLSX
+          </Button>
         </div>
       </div>
     );
-  }, [page, pages, onPreviousPage, onNextPage, handleParse]);
+  }, [page, pages, onPreviousPage, onNextPage, handleParse, handleExport]);
 
   useEffect(() => {
     async function fetcher() {

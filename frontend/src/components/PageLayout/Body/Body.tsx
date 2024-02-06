@@ -7,7 +7,7 @@ const Body = ({ headerHeight }: BodyProps) => {
   console.log(headerHeight);
   return (
     <div
-      className="overflow-hidden"
+      className="overflow-auto"
       style={{ height: `calc(100vh - ${headerHeight}px)` }}
     >
       <Outlet />
