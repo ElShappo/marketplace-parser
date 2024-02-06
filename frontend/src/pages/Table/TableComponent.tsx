@@ -666,6 +666,7 @@ const TableComponent = () => {
         ],
       };
     }
+    console.log(JSON.stringify(newProducts));
     setProducts(newProducts);
     setCheckpoint(newProducts);
 
