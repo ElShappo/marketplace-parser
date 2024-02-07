@@ -32,7 +32,12 @@ import {
   IProductRecordExcel,
 } from "../../types";
 import { saveAs } from "file-saver";
-import { OzonParser, ProductRecord, addIsEditedProperty } from "../../utils";
+import {
+  OzonParser,
+  ProductRecord,
+  addIsEditedProperty,
+  db,
+} from "../../utils";
 import { Store } from "react-notifications-component";
 import Excel from "exceljs";
 import Loader from "../../components/Loader";
@@ -223,23 +228,7 @@ const TableComponent = () => {
             changeIsEdited(product, false);
             console.log("has existed previously");
 
-            try {
-              const res = await fetch("http://localhost:3001/updateProducts", {
-                method: "PUT",
-                body: JSON.stringify(product),
-                headers: {
-                  "Content-Type": "application/json;charset=utf-8",
-                },
-              });
-              if (res.ok) {
-                console.log("success!");
-              } else {
-                console.error("server error!");
-              }
-            } catch (error) {
-              console.error("client error!");
-            }
-            // if the row hasn't existed previously
+            await db.put(product);
           } else if (
             !ids.has(product.productId) &&
             !names.has(product.searchedName)
@@ -251,22 +240,7 @@ const TableComponent = () => {
             changeIsEdited(product, false);
             console.log("has not existed previously");
             console.log(product);
-            try {
-              const res = await fetch("http://localhost:3001/addProducts", {
-                method: "POST",
-                body: JSON.stringify(product),
-                headers: {
-                  "Content-Type": "application/json;charset=utf-8",
-                },
-              });
-              if (res.ok) {
-                console.log("success!");
-              } else {
-                console.error("server error!");
-              }
-            } catch (error) {
-              console.error("client error!");
-            }
+            await db.put(product);
           } else {
             console.warn(
               "trying to add row with id or name that already exist"
@@ -330,24 +304,7 @@ const TableComponent = () => {
       async function onDelete(product: IProductRecord) {
         console.log("ondelete fired");
         deleteAndCreateNew(product);
-
-        try {
-          const res = await fetch("http://localhost:3001/deleteProducts", {
-            method: "PUT",
-            body: JSON.stringify(product),
-            headers: {
-              "Content-Type": "application/json;charset=utf-8",
-            },
-          });
-
-          if (res.ok) {
-            console.log("success!");
-          } else {
-            console.error("server error!");
-          }
-        } catch (error) {
-          console.error("client error!");
-        }
+        await db.delete(product);
       }
 
       const cellValue = product[columnKey as keyof IProductRecord];
@@ -538,36 +495,11 @@ const TableComponent = () => {
       });
       console.log(rows);
 
-      try {
-        const promiseDelete = await fetch("http://localhost:3001/deleteAll", {
-          method: "PUT",
-        });
+      await db.delete();
+      await db.put(rows);
 
-        if (promiseDelete.ok) {
-          console.log("products deletion successful");
-        } else {
-          throw new Error("couldn't delete products");
-        }
-
-        const promiseAdd = await fetch("http://localhost:3001/addProducts", {
-          method: "POST",
-          body: JSON.stringify(rows),
-          headers: {
-            "Content-Type": "application/json;charset=utf-8",
-          },
-        });
-
-        if (promiseAdd.ok) {
-          console.log("products were successfully added");
-        } else {
-          throw new Error("couldn't add products");
-        }
-
-        setProducts(() => rows);
-        setCheckpoint(() => rows);
-      } catch (error) {
-        console.error(error);
-      }
+      setProducts(() => rows);
+      setCheckpoint(() => rows);
     }
   }, []);
 
@@ -800,22 +732,7 @@ const TableComponent = () => {
 
     const newProductsStringified = JSON.stringify(newProducts);
 
-    try {
-      const response = await fetch("http://localhost:3001/updateProducts", {
-        method: "PUT",
-        body: newProductsStringified,
-        headers: {
-          "Content-Type": "application/json;charset=utf-8",
-        },
-      });
-      if (response.ok) {
-        console.log("success!");
-      } else {
-        console.error("server error!");
-      }
-    } catch (error) {
-      console.error("client error!");
-    }
+    await db.put(newProducts);
 
     setHasFinishedParsing(true);
     const latestParseDate = new Date();
@@ -886,15 +803,17 @@ const TableComponent = () => {
 
   useEffect(() => {
     async function fetcher() {
-      const promise = await fetch("http://localhost:3001/getProducts");
-      const res = await promise.json();
-      res.forEach(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (row: any) => (row.marketplaces = JSON.parse(row.marketplaces))
-      );
+      await db.initialize();
+      let res = await db.get();
       console.log(res);
-      setProducts(addIsEditedProperty(res));
-      setCheckpoint(addIsEditedProperty(res));
+
+      if (res) {
+        if (!Array.isArray(res)) {
+          res = [res];
+        }
+        setProducts(addIsEditedProperty(res));
+        setCheckpoint(addIsEditedProperty(res));
+      }
     }
     fetcher();
   }, []);
