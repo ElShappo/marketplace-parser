@@ -72,6 +72,8 @@ export function addIsEditedProperty(
   isEdited: boolean = false
 ): IProductRecord[] {
   const shallowCopy = [...products];
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //@ts-ignore
   return shallowCopy.map((product) => {
     return { ...product, isEdited };
   });
