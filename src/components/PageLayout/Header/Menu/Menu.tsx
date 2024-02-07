@@ -101,7 +101,11 @@ const Menu = () => {
             <DropdownItem key="copy" startContent={<StackedLineChartIcon />}>
               Charts
             </DropdownItem>
-            <DropdownItem key="edit" startContent={<InfoIcon />}>
+            <DropdownItem
+              key="edit"
+              startContent={<InfoIcon />}
+              onPress={() => handleOpen()}
+            >
               Info
             </DropdownItem>
           </DropdownMenu>

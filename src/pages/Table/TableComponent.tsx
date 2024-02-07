@@ -624,6 +624,12 @@ const TableComponent = () => {
     saveAs(new Blob([buffer]), "result.xlsx");
   }, []);
 
+  const deleteAll = React.useCallback(async () => {
+    setProducts(() => []);
+    setCheckpoint(() => []);
+    await db.delete();
+  }, []);
+
   const topContent = React.useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -664,6 +670,14 @@ const TableComponent = () => {
             >
               Add New
             </Button>
+            <Button
+              className="flex-initial"
+              color="danger"
+              endContent={<DeleteIcon />}
+              onClick={() => deleteAll()}
+            >
+              Delete All
+            </Button>
           </div>
         </div>
         <div className="flex justify-between items-center">
@@ -685,13 +699,14 @@ const TableComponent = () => {
       </div>
     );
   }, [
-    handleImport,
     filterValue,
     onSearchChange,
+    handleImport,
     products.length,
     onRowsPerPageChange,
     onClear,
     addProduct,
+    deleteAll,
   ]);
 
   const handleParse = React.useCallback(async () => {
@@ -781,7 +796,6 @@ const TableComponent = () => {
           <Button
             color="warning"
             endContent={<PlayCircleFilledWhiteIcon />}
-            size="lg"
             className="font-bold uppercase"
             onClick={handleParse}
           >
@@ -790,7 +804,6 @@ const TableComponent = () => {
           <Button
             color="warning"
             endContent={<FileDownloadIcon />}
-            size="lg"
             className="font-bold uppercase"
             onClick={handleExport}
           >
