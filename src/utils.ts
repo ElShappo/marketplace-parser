@@ -162,7 +162,7 @@ class OzonParser extends MarketplaceParser {
     //   this._proxies?.[Math.floor(Math.random() * this._proxies?.length)];
 
     try {
-      const res = await fetch("http://localhost:3001/proxy", {
+      const res = await fetch("/api/proxy", {
         method: "POST",
         body: JSON.stringify({
           url: url.href,

@@ -1,22 +1,15 @@
-import express, { Express, Request, Response } from "express";
-import dotenv from "dotenv";
-import cors from "cors";
+import express, { Router } from "express";
+import serverless from "serverless-http";
 import axios from "axios";
 
-dotenv.config();
+const api = express();
 
-const app: Express = express();
-app.use(cors());
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ limit: "5mb", extended: true }));
-
-const port = process.env.PORT || 3001;
-
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
+const router = Router();
+router.get("/hello", (req, res) => {
+  res.send(process.env.USERNAME!);
 });
 
-app.post("/proxy", async (req: Request, res: Response) => {
+router.post("/proxy", async (req, res) => {
   const { targetUrl }: { targetUrl: string } = req.body;
   console.log(targetUrl);
 
@@ -42,6 +35,6 @@ app.post("/proxy", async (req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+api.use("/api/", router);
+
+export const handler = serverless(api);

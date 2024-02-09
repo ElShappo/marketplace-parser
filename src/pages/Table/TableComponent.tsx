@@ -817,6 +817,9 @@ const TableComponent = () => {
 
   useEffect(() => {
     async function fetcher() {
+      const test = await fetch("/api/hello");
+      const result = await test.text();
+      console.log(result);
       await db.initialize();
       let res = await db.get();
       console.log(res);
