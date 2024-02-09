@@ -1,9 +1,6 @@
 import express, { Router } from "express";
 import serverless from "serverless-http";
 import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const api = express();
 
@@ -26,8 +23,8 @@ router.post("/proxy", async (req, res) => {
         host: "proxy-server.scraperapi.com",
         port: 8001,
         auth: {
-          username: process.env.USERNAME!,
-          password: process.env.PASSWORD!,
+          username: "scraperapi",
+          password: "28853040141d7e45fe6b72af841e9496",
         },
         protocol: "http",
       },
