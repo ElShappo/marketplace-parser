@@ -1,9 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import fetch from "node-fetch";
 import axios from "axios";
-import { HttpsProxyAgent } from "https-proxy-agent";
 
 dotenv.config();
 
@@ -29,8 +27,8 @@ app.post("/proxy", async (req: Request, res: Response) => {
         host: "proxy-server.scraperapi.com",
         port: 8001,
         auth: {
-          username: process.env.USERNAME,
-          password: process.env.PASSWORD,
+          username: process.env.USERNAME!,
+          password: process.env.PASSWORD!,
         },
         protocol: "http",
       },
