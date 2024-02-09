@@ -41,3 +41,10 @@ export interface IProductRecordExcel extends IProductExcel {
   recordId: string;
   isEdited: boolean;
 }
+
+export interface IProxyFetchResult {
+  data: {
+    _id: string;
+    ip: string;
+  };
+}

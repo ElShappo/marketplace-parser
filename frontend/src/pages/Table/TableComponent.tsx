@@ -33,7 +33,7 @@ import {
 } from "../../types";
 import { saveAs } from "file-saver";
 import {
-  OzonParser,
+  ozonParser,
   ProductRecord,
   addIsEditedProperty,
   db,
@@ -711,15 +711,16 @@ const TableComponent = () => {
 
   const handleParse = React.useCallback(async () => {
     const productNames = checkpoint.map((pr) => pr.searchedName);
-    const ozonParser = new OzonParser();
     const resArray = [];
+
+    await ozonParser.initialize();
 
     setHasFinishedParsing(false);
 
     for (const productName of productNames) {
       console.log(productName);
       const delay = new Promise((resolve) => {
-        setTimeout(resolve, 200);
+        setTimeout(resolve, 800);
       });
       await delay;
       const res = await ozonParser.parseProduct(productName);

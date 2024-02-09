@@ -92,7 +92,19 @@ class MarketplaceParser {
   _productNameSelector: string;
   _productLinkSelector: string;
   _productPriceSelector: string;
+  _proxies: string[] | undefined;
   // _productDescriptionSelector: string;
+
+  async initialize() {
+    const promise = await fetch(
+      "https://proxylist.geonode.com/api/proxy-list?protocols=https&limit=500&page=1&sort_by=lastChecked&sort_type=desc"
+    );
+    this._proxies = ((await promise.json()).data as []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (row: any) => "https://" + row.ip + ":" + row.port
+    );
+    console.log(this._proxies);
+  }
 
   constructor({
     baseUrl,
@@ -118,7 +130,7 @@ class MarketplaceParser {
   }
 }
 
-export class OzonParser extends MarketplaceParser {
+class OzonParser extends MarketplaceParser {
   constructor() {
     const url = new URL("https://www.ozon.ru/search/");
     url.searchParams.set("from_global", "true");
@@ -146,8 +158,20 @@ export class OzonParser extends MarketplaceParser {
 
     console.log(url.href);
 
+    // const randomProxy =
+    //   this._proxies?.[Math.floor(Math.random() * this._proxies?.length)];
+
     try {
-      const res = await fetch(url.href);
+      const res = await fetch("http://localhost:3001/proxy", {
+        method: "POST",
+        body: JSON.stringify({
+          url: url.href,
+          // proxyIp: randomProxy,
+        }),
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+      });
       const text = await res.text();
       const htmlDocument = parser.parseFromString(text, "text/html");
       const resultsContainer = htmlDocument.querySelector(
@@ -396,4 +420,5 @@ class AsyncDB {
 //   }
 // }
 
+export const ozonParser = new OzonParser();
 export const db = new AsyncDB();
