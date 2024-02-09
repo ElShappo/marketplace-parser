@@ -165,7 +165,7 @@ class OzonParser extends MarketplaceParser {
       const res = await fetch("/api/proxy", {
         method: "POST",
         body: JSON.stringify({
-          url: url.href,
+          targetUrl: url.href,
           // proxyIp: randomProxy,
         }),
         headers: {

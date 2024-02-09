@@ -719,10 +719,10 @@ const TableComponent = () => {
 
     for (const productName of productNames) {
       console.log(productName);
-      const delay = new Promise((resolve) => {
-        setTimeout(resolve, 800);
-      });
-      await delay;
+      // const delay = new Promise((resolve) => {
+      //   setTimeout(resolve, 800);
+      // });
+      // await delay;
       const res = await ozonParser.parseProduct(productName);
       console.log(res);
       resArray.push(res);

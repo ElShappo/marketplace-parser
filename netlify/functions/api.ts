@@ -1,8 +1,14 @@
 import express, { Router } from "express";
 import serverless from "serverless-http";
 import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const api = express();
+
+api.use(express.json({ limit: "5mb" }));
+api.use(express.urlencoded({ limit: "5mb", extended: true }));
 
 const router = Router();
 router.get("/hello", (req, res) => {
@@ -27,7 +33,7 @@ router.post("/proxy", async (req, res) => {
       },
     });
     const { data } = result;
-    console.log(data);
+    // console.log(data);
     res.send(data);
   } catch (error) {
     console.error(error);
